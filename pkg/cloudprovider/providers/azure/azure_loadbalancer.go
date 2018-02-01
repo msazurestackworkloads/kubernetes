@@ -631,6 +631,8 @@ func (az *Cloud) reconcileLoadBalancer(lb network.LoadBalancer, fipConfiguration
 		if service.Spec.SessionAffinity == v1.ServiceAffinityClientIP {
 			loadDistribution = network.SourceIP
 		}
+
+		// Azure stack: set the BackendPort to podPresencePort and EnableFloatingIP to false
 		expectedRule := network.LoadBalancingRule{
 			Name: &lbRuleName,
 			LoadBalancingRulePropertiesFormat: &network.LoadBalancingRulePropertiesFormat{
@@ -643,8 +645,8 @@ func (az *Cloud) reconcileLoadBalancer(lb network.LoadBalancer, fipConfiguration
 				},
 				LoadDistribution: loadDistribution,
 				FrontendPort:     to.Int32Ptr(port.Port),
-				BackendPort:      to.Int32Ptr(port.Port),
-				EnableFloatingIP: to.BoolPtr(true),
+				BackendPort:      to.Int32Ptr(port.NodePort),
+				EnableFloatingIP: to.BoolPtr(false),
 			},
 		}
 
