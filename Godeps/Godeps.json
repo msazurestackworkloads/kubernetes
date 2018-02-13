@@ -29,7 +29,7 @@
 			"Rev": "3b1ae45394a234c385be014e9a488f2bb6eef821"
 		},
 		{
-			"ImportPath": "github.com/Azure/azure-sdk-for-go/arm/compute",
+			"ImportPath": "github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/compute/mgmt/compute",
 			"Comment": "v11.1.1-beta",
 			"Rev": "509eea43b93cec2f3f17acbe2578ef58703923f8"
 		},

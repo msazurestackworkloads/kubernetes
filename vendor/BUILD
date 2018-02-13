@@ -13,7 +13,7 @@ filegroup(
         "//vendor/bitbucket.org/ww/goautoneg:all-srcs",
         "//vendor/cloud.google.com/go/compute/metadata:all-srcs",
         "//vendor/cloud.google.com/go/internal:all-srcs",
-        "//vendor/github.com/Azure/azure-sdk-for-go/arm/compute:all-srcs",
+        "//vendor/github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/compute/mgmt/compute:all-srcs",
         "//vendor/github.com/Azure/azure-sdk-for-go/arm/containerregistry:all-srcs",
         "//vendor/github.com/Azure/azure-sdk-for-go/arm/disk:all-srcs",
         "//vendor/github.com/Azure/azure-sdk-for-go/arm/network:all-srcs",
