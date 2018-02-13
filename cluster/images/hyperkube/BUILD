@@ -27,7 +27,7 @@ docker_build(
 
 docker_bundle(
     name = "hyperkube",
-    images = {"gcr.io/google-containers/hyperkube-amd64:{STABLE_DOCKER_TAG}": "hyperkube-internal"},
+    images = {"gcr.io/google_containers/hyperkube-amd64:{STABLE_DOCKER_TAG}": "hyperkube-internal"},
     stamp = True,
 )
 
