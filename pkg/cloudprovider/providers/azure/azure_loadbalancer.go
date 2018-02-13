@@ -636,8 +636,8 @@ func (az *Cloud) reconcileLoadBalancer(clusterName string, service *v1.Service, 
 				},
 				LoadDistribution: loadDistribution,
 				FrontendPort:     to.Int32Ptr(port.Port),
-				BackendPort:      to.Int32Ptr(port.Port),
-				EnableFloatingIP: to.BoolPtr(true),
+				BackendPort:      to.Int32Ptr(port.NodePort),
+				EnableFloatingIP: to.BoolPtr(false),
 			},
 		}
 

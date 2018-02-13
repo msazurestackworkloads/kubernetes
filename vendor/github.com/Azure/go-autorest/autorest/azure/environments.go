@@ -135,10 +135,33 @@ var (
 
 // EnvironmentFromName returns an Environment based on the common name specified
 func EnvironmentFromName(name string) (Environment, error) {
-	name = strings.ToUpper(name)
-	env, ok := environments[name]
+	// IMPORTANT
+	// As per @radhikagupta5:
+	// This is technical debt, fundamentally here because Kubernetes is not currently accepting
+	// contributions to the providers. Once that is an option, the provider should be updated to
+	// directly call `EnvironmentFromFile`. Until then, we rely on dispatching Azure Stack environment creation
+	var toUpperName = strings.ToUpper(name)
+	if strings.EqualFold(toUpperName, "AZURESTACKCLOUD") {
+		return EnvironmentFromFile(path.Join("etc", "kubernetes", "azurestackcloud.json"), name)
+	}
+	env, ok := environments[toUpperName]
 	if !ok {
 		return env, fmt.Errorf("autorest/azure: There is no cloud environment matching the name %q", name)
+	}
+	return env, nil
+}
+
+func EnvironmentFromFile(location string, name string) (Environment, error) {
+	env := Environment{
+		Name: name,
+	}
+	fileContents, err := ioutil.ReadFile(location)
+	if err != nil {
+		return env, fmt.Errorf("autorest/azure: Error in opening the env. jason file %q", err.Error())
+	}
+	err = json.Unmarshal(fileContents, &env)
+	if err != nil {
+		return env, fmt.Errorf("autorest/azure: Error parsing the env. jason file %q", err.Error())
 	}
 	return env, nil
 }
