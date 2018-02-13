@@ -15,7 +15,10 @@ package azure
 //  limitations under the License.
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"path"
 	"strings"
 )
 
