@@ -193,7 +193,7 @@ type Cloud struct {
 	LoadBalancerClient       LoadBalancersClient
 	PublicIPAddressesClient  PublicIPAddressesClient
 	SecurityGroupsClient     SecurityGroupsClient
-	VirtualMachinesClient    VirtualMachinesClient
+	VirtualMachinesClient    compute.VirtualMachinesClient
 	StorageAccountClient     storage.AccountsClient
 	DisksClient              disk.DisksClient
 	operationPollRateLimiter flowcontrol.RateLimiter
