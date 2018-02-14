@@ -18,6 +18,7 @@ package azure
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net/url"
@@ -316,7 +317,8 @@ func (c *BlobDiskController) getStorageAccountKey(SAName string) (string, error)
 	if account, exists := c.accounts[SAName]; exists && account.key != "" {
 		return c.accounts[SAName].key, nil
 	}
-	listKeysResult, err := c.common.cloud.StorageAccountClient.ListKeys(c.common.resourceGroup, SAName)
+	cntx := context.background()
+	listKeysResult, err := c.common.cloud.StorageAccountClient.ListKeys(cntx, c.common.resourceGroup, SAName)
 	if err != nil {
 		return "", err
 	}
@@ -471,7 +473,8 @@ func (c *BlobDiskController) getDiskCount(SAName string) (int, error) {
 }
 
 func (c *BlobDiskController) getAllStorageAccounts() (map[string]*storageAccountState, error) {
-	accountListResult, err := c.common.cloud.StorageAccountClient.List()
+	cntx := context.Background()
+	accountListResult, err := c.common.cloud.StorageAccountClient.List(cntx)
 	if err != nil {
 		return nil, err
 	}
@@ -525,10 +528,11 @@ func (c *BlobDiskController) createStorageAccount(storageAccountName string, sto
 			Sku:      &storage.Sku{Name: storageAccountType},
 			Tags:     &map[string]*string{"created-by": to.StringPtr("azure-dd")},
 			Location: &location}
-		cancel := make(chan struct{})
-
-		_, errChan := c.common.cloud.StorageAccountClient.Create(c.common.resourceGroup, storageAccountName, cp, cancel)
-		err := <-errChan
+		//cancel := make(chan struct{})
+		cntx := context.Background()
+		future, _ := c.common.cloud.StorageAccountClient.Create(cntx, c.common.resourceGroup, storageAccountName, cp)
+		_, err := future.Result(c.common.cloud.StorageAccountClient)
+		// err := <-errChan
 		if err != nil {
 			return fmt.Errorf(fmt.Sprintf("Create Storage Account: %s, error: %s", storageAccountName, err))
 		}
@@ -638,7 +642,8 @@ func (c *BlobDiskController) getNextAccountNum() int {
 }
 
 func (c *BlobDiskController) deleteStorageAccount(storageAccountName string) error {
-	resp, err := c.common.cloud.StorageAccountClient.Delete(c.common.resourceGroup, storageAccountName)
+	cntx := context.Background()
+	resp, err := c.common.cloud.StorageAccountClient.Delete(cntx, c.common.resourceGroup, storageAccountName)
 	if err != nil {
 		return fmt.Errorf("azureDisk - Delete of storage account '%s' failed with status %s...%v", storageAccountName, resp.Status, err)
 	}
@@ -651,7 +656,8 @@ func (c *BlobDiskController) deleteStorageAccount(storageAccountName string) err
 
 //Gets storage account exist, provisionStatus, Error if any
 func (c *BlobDiskController) getStorageAccountState(storageAccountName string) (bool, storage.ProvisioningState, error) {
-	account, err := c.common.cloud.StorageAccountClient.GetProperties(c.common.resourceGroup, storageAccountName)
+	cntx := context.Background()
+	account, err := c.common.cloud.StorageAccountClient.GetProperties(cntx, c.common.resourceGroup, storageAccountName)
 	if err != nil {
 		return false, "", err
 	}

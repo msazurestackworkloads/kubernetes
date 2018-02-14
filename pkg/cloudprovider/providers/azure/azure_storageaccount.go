@@ -17,6 +17,7 @@ limitations under the License.
 package azure
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -31,7 +32,8 @@ type accountWithLocation struct {
 func (az *Cloud) getStorageAccounts() ([]accountWithLocation, error) {
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("StorageAccountClient.ListByResourceGroup(%v): start", az.ResourceGroup)
-	result, err := az.StorageAccountClient.ListByResourceGroup(az.ResourceGroup)
+	cntx := context.Background()
+	result, err := az.StorageAccountClient.ListByResourceGroup(cntx, az.ResourceGroup)
 	glog.V(10).Infof("StorageAccountClient.ListByResourceGroup(%v): end", az.ResourceGroup)
 	if err != nil {
 		return nil, err
@@ -63,7 +65,8 @@ func (az *Cloud) getStorageAccounts() ([]accountWithLocation, error) {
 func (az *Cloud) getStorageAccesskey(account string) (string, error) {
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("StorageAccountClient.ListKeys(%q): start", account)
-	result, err := az.StorageAccountClient.ListKeys(az.ResourceGroup, account)
+	cntx := context.Background()
+	result, err := az.StorageAccountClient.ListKeys(cntx, az.ResourceGroup, account)
 	glog.V(10).Infof("StorageAccountClient.ListKeys(%q): end", account)
 	if err != nil {
 		return "", err
