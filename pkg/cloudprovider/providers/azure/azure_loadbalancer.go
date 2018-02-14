@@ -1297,7 +1297,8 @@ func (az *Cloud) ensureHostInPool(serviceName string, nodeName types.NodeName, b
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("InterfacesClient.Get(%q): start", nicName)
-	nic, err := az.InterfacesClient.Get(az.ResourceGroup, nicName, "")
+	cntx := context.Background()
+	nic, err := az.InterfacesClient.Get(cntx, az.ResourceGroup, nicName, "")
 	glog.V(10).Infof("InterfacesClient.Get(%q): end", nicName)
 	if err != nil {
 		return err
@@ -1331,9 +1332,9 @@ func (az *Cloud) ensureHostInPool(serviceName string, nodeName types.NodeName, b
 		glog.V(3).Infof("nicupdate(%s): nic(%s) - updating", serviceName, nicName)
 		az.operationPollRateLimiter.Accept()
 		glog.V(10).Infof("InterfacesClient.CreateOrUpdate(%q): start", *nic.Name)
-		respChan, errChan := az.InterfacesClient.CreateOrUpdate(az.ResourceGroup, *nic.Name, nic, nil)
-		resp := <-respChan
-		err := <-errChan
+		cntx := context.Background()
+		future, _ := az.InterfacesClient.CreateOrUpdate(cntx, az.ResourceGroup, *nic.Name, nic)
+		resp, res := future.Result(az.InterfacesClient)
 		glog.V(10).Infof("InterfacesClient.CreateOrUpdate(%q): end", *nic.Name)
 		if az.CloudProviderBackoff && shouldRetryAPIRequest(resp.Response, err) {
 			glog.V(2).Infof("nicupdate(%s) backing off: nic(%s) - updating, err=%v", serviceName, nicName, err)
