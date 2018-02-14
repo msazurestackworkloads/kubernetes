@@ -1086,16 +1086,16 @@ func consolidate(existingRule network.SecurityRule, newRule network.SecurityRule
 	return network.SecurityRule{
 		Name: existingRule.Name,
 		SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-			Priority:                   existingRule.Priority,
-			Protocol:                   existingRule.Protocol,
-			SourcePortRange:            existingRule.SourcePortRange,
+			Priority:        existingRule.Priority,
+			Protocol:        existingRule.Protocol,
+			SourcePortRange: existingRule.SourcePortRange,
 			//SourcePortRanges:           existingRule.SourcePortRanges,
-			DestinationPortRange:       existingRule.DestinationPortRange,
+			DestinationPortRange: existingRule.DestinationPortRange,
 			//DestinationPortRanges:      existingRule.DestinationPortRanges,
-			SourceAddressPrefix:        existingRule.SourceAddressPrefix,
+			SourceAddressPrefix: existingRule.SourceAddressPrefix,
 			//SourceAddressPrefixes:      existingRule.SourceAddressPrefixes,
 			//DestinationAddressPrefixes: destinations,
-			DestinationAddressPrefix: newRule.DestinationAddressPrefix
+			DestinationAddressPrefix: newRule.DestinationAddressPrefix,
 			Access:    existingRule.Access,
 			Direction: existingRule.Direction,
 		},
