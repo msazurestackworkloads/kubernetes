@@ -1063,15 +1063,16 @@ func makeConsolidatable(rule network.SecurityRule) network.SecurityRule {
 	return network.SecurityRule{
 		Name: rule.Name,
 		SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-			Priority:                   rule.Priority,
-			Protocol:                   rule.Protocol,
-			SourcePortRange:            rule.SourcePortRange,
-			SourcePortRanges:           rule.SourcePortRanges,
-			DestinationPortRange:       rule.DestinationPortRange,
-			DestinationPortRanges:      rule.DestinationPortRanges,
-			SourceAddressPrefix:        rule.SourceAddressPrefix,
-			SourceAddressPrefixes:      rule.SourceAddressPrefixes,
-			DestinationAddressPrefixes: collectionOrSingle(rule.DestinationAddressPrefixes, rule.DestinationAddressPrefix),
+			Priority:        rule.Priority,
+			Protocol:        rule.Protocol,
+			SourcePortRange: rule.SourcePortRange,
+			//SourcePortRanges:           rule.SourcePortRanges,
+			DestinationPortRange: rule.DestinationPortRange,
+			//DestinationPortRanges:      rule.DestinationPortRanges,
+			SourceAddressPrefix: rule.SourceAddressPrefix,
+			//SourceAddressPrefixes:      rule.SourceAddressPrefixes,
+			// DestinationAddressPrefixes: collectionOrSingle(rule.DestinationAddressPrefixes, rule.DestinationAddressPrefix),
+			DestinationAddressPrefix: rule.DestinationAddressPrefix,
 			Access:    rule.Access,
 			Direction: rule.Direction,
 		},
@@ -1079,8 +1080,8 @@ func makeConsolidatable(rule network.SecurityRule) network.SecurityRule {
 }
 
 func consolidate(existingRule network.SecurityRule, newRule network.SecurityRule) network.SecurityRule {
-	destinations := appendElements(existingRule.SecurityRulePropertiesFormat.DestinationAddressPrefixes, newRule.DestinationAddressPrefix, newRule.DestinationAddressPrefixes)
-	destinations = deduplicate(destinations) // there are transient conditions during controller startup where it tries to add a service that is already added
+	// destinations := appendElements(existingRule.SecurityRulePropertiesFormat.DestinationAddressPrefixes, newRule.DestinationAddressPrefix, newRule.DestinationAddressPrefixes)
+	// destinations = deduplicate(destinations) // there are transient conditions during controller startup where it tries to add a service that is already added
 
 	return network.SecurityRule{
 		Name: existingRule.Name,
@@ -1088,12 +1089,13 @@ func consolidate(existingRule network.SecurityRule, newRule network.SecurityRule
 			Priority:                   existingRule.Priority,
 			Protocol:                   existingRule.Protocol,
 			SourcePortRange:            existingRule.SourcePortRange,
-			SourcePortRanges:           existingRule.SourcePortRanges,
+			//SourcePortRanges:           existingRule.SourcePortRanges,
 			DestinationPortRange:       existingRule.DestinationPortRange,
-			DestinationPortRanges:      existingRule.DestinationPortRanges,
+			//DestinationPortRanges:      existingRule.DestinationPortRanges,
 			SourceAddressPrefix:        existingRule.SourceAddressPrefix,
-			SourceAddressPrefixes:      existingRule.SourceAddressPrefixes,
-			DestinationAddressPrefixes: destinations,
+			//SourceAddressPrefixes:      existingRule.SourceAddressPrefixes,
+			//DestinationAddressPrefixes: destinations,
+			DestinationAddressPrefix: newRule.DestinationAddressPrefix
 			Access:    existingRule.Access,
 			Direction: existingRule.Direction,
 		},
