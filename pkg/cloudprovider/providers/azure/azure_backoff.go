@@ -17,6 +17,8 @@ limitations under the License.
 package azure
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/azure-sdk-for-go/arm/network"
@@ -82,11 +84,14 @@ func (az *Cloud) GetScaleSetsVMWithRetry(name types.NodeName) (compute.VirtualMa
 func (az *Cloud) VirtualMachineClientListWithRetry() ([]compute.VirtualMachine, error) {
 	allNodes := []compute.VirtualMachine{}
 	var result compute.VirtualMachineListResult
+	var resultPage compute.VirtualMachineListResultPage
 	err := wait.ExponentialBackoff(az.requestBackoff(), func() (bool, error) {
+		cntx := context.Background()
 		var retryErr error
 		az.operationPollRateLimiter.Accept()
 		glog.V(10).Infof("VirtualMachinesClient.List(%v): start", az.ResourceGroup)
-		result, retryErr = az.VirtualMachinesClient.List(az.ResourceGroup)
+		resultPage, retryErr = az.VirtualMachinesClient.List(cntx, az.ResourceGroup)
+		result = resultPage.Response()
 		glog.V(10).Infof("VirtualMachinesClient.List(%v): end", az.ResourceGroup)
 		if retryErr != nil {
 			glog.Errorf("VirtualMachinesClient.List(%v) - backoff: failure, will retry,err=%v",
@@ -102,6 +107,7 @@ func (az *Cloud) VirtualMachineClientListWithRetry() ([]compute.VirtualMachine, 
 	}
 
 	appendResults := (result.Value != nil && len(*result.Value) > 0)
+	//appendResults := resultPage.NotDone()
 	for appendResults {
 		allNodes = append(allNodes, *result.Value...)
 		appendResults = false
@@ -111,7 +117,9 @@ func (az *Cloud) VirtualMachineClientListWithRetry() ([]compute.VirtualMachine, 
 				var retryErr error
 				az.operationPollRateLimiter.Accept()
 				glog.V(10).Infof("VirtualMachinesClient.ListNextResults(%v): start", az.ResourceGroup)
-				result, retryErr = az.VirtualMachinesClient.ListNextResults(result)
+				//result, retryErr = az.VirtualMachinesClient.ListNextResults(result)
+				retryErr = resultPage.Next()
+				result = resultPage.Response()
 				glog.V(10).Infof("VirtualMachinesClient.ListNextResults(%v): end", az.ResourceGroup)
 				if retryErr != nil {
 					glog.Errorf("VirtualMachinesClient.ListNextResults(%v) - backoff: failure, will retry,err=%v",
@@ -380,9 +388,9 @@ func (az *Cloud) CreateOrUpdateVMWithRetry(vmName string, newVM compute.VirtualM
 	return wait.ExponentialBackoff(az.requestBackoff(), func() (bool, error) {
 		az.operationPollRateLimiter.Accept()
 		glog.V(10).Infof("VirtualMachinesClient.CreateOrUpdate(%s): start", vmName)
-		respChan, errChan := az.VirtualMachinesClient.CreateOrUpdate(az.ResourceGroup, vmName, newVM, nil)
-		resp := <-respChan
-		err := <-errChan
+		cntx := context.Background()
+		future, _ := az.VirtualMachinesClient.CreateOrUpdate(cntx, az.ResourceGroup, vmName, newVM)
+		resp, err := future.Result(az.VirtualMachinesClient)
 		glog.V(10).Infof("VirtualMachinesClient.CreateOrUpdate(%s): end", vmName)
 		return processRetryResponse(resp.Response, err)
 	})

@@ -17,6 +17,7 @@ limitations under the License.
 package azure
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -76,6 +77,7 @@ func (c *controllerCommon) AttachDisk(isManagedDisk bool, diskName, diskURI stri
 		return err
 	}
 
+	isManagedDisk = false
 	disks := *vm.StorageProfile.DataDisks
 	if isManagedDisk {
 		disks = append(disks,
@@ -84,9 +86,9 @@ func (c *controllerCommon) AttachDisk(isManagedDisk bool, diskName, diskURI stri
 				Lun:          &lun,
 				Caching:      cachingMode,
 				CreateOption: "attach",
-				ManagedDisk: &compute.ManagedDiskParameters{
-					ID: &diskURI,
-				},
+				// ManagedDisk: &compute.ManagedDiskParameters{
+				// 	ID: &diskURI,
+				// },
 			})
 	} else {
 		disks = append(disks,
@@ -112,9 +114,10 @@ func (c *controllerCommon) AttachDisk(isManagedDisk bool, diskName, diskURI stri
 	vmName := mapNodeNameToVMName(nodeName)
 	glog.V(2).Infof("azureDisk - update(%s): vm(%s) - attach disk", c.resourceGroup, vmName)
 	c.cloud.operationPollRateLimiter.Accept()
-	respChan, errChan := c.cloud.VirtualMachinesClient.CreateOrUpdate(c.resourceGroup, vmName, newVM, nil)
-	resp := <-respChan
-	err = <-errChan
+	cntx := context.Background()
+	future, _ := c.cloud.VirtualMachinesClient.CreateOrUpdate(cntx, c.resourceGroup, vmName, newVM)
+	resp, errf := future.Result(c.cloud.VirtualMachinesClient)
+	err = errf
 	if c.cloud.CloudProviderBackoff && shouldRetryAPIRequest(resp.Response, err) {
 		glog.V(2).Infof("azureDisk - update(%s) backing off: vm(%s)", c.resourceGroup, vmName)
 		retryErr := c.cloud.CreateOrUpdateVMWithRetry(vmName, newVM)
@@ -153,8 +156,9 @@ func (c *controllerCommon) DetachDiskByName(diskName, diskURI string, nodeName t
 	bFoundDisk := false
 	for i, disk := range disks {
 		if disk.Lun != nil && (disk.Name != nil && diskName != "" && *disk.Name == diskName) ||
-			(disk.Vhd != nil && disk.Vhd.URI != nil && diskURI != "" && *disk.Vhd.URI == diskURI) ||
-			(disk.ManagedDisk != nil && diskURI != "" && *disk.ManagedDisk.ID == diskURI) {
+			(disk.Vhd != nil && disk.Vhd.URI != nil && diskURI != "" && *disk.Vhd.URI == diskURI) {
+			// ||
+			// (disk.ManagedDisk != nil && diskURI != "" && *disk.ManagedDisk.ID == diskURI) {
 			// found the disk
 			glog.V(4).Infof("azureDisk - detach disk: name %q uri %q", diskName, diskURI)
 			disks = append(disks[:i], disks[i+1:]...)
@@ -208,8 +212,9 @@ func (c *controllerCommon) GetDiskLun(diskName, diskURI string, nodeName types.N
 	disks := *vm.StorageProfile.DataDisks
 	for _, disk := range disks {
 		if disk.Lun != nil && (disk.Name != nil && diskName != "" && *disk.Name == diskName) ||
-			(disk.Vhd != nil && disk.Vhd.URI != nil && diskURI != "" && *disk.Vhd.URI == diskURI) ||
-			(disk.ManagedDisk != nil && *disk.ManagedDisk.ID == diskURI) {
+			(disk.Vhd != nil && disk.Vhd.URI != nil && diskURI != "" && *disk.Vhd.URI == diskURI) {
+			// ||
+			// (disk.ManagedDisk != nil && *disk.ManagedDisk.ID == diskURI) {
 			// found the disk
 			glog.V(4).Infof("azureDisk - find disk: lun %d name %q uri %q", *disk.Lun, diskName, diskURI)
 			return *disk.Lun, nil
