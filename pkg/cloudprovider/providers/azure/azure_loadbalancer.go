@@ -1334,7 +1334,7 @@ func (az *Cloud) ensureHostInPool(serviceName string, nodeName types.NodeName, b
 		glog.V(10).Infof("InterfacesClient.CreateOrUpdate(%q): start", *nic.Name)
 		cntx := context.Background()
 		future, _ := az.InterfacesClient.CreateOrUpdate(cntx, az.ResourceGroup, *nic.Name, nic)
-		resp, res := future.Result(az.InterfacesClient)
+		resp, err := future.Result(az.InterfacesClient)
 		glog.V(10).Infof("InterfacesClient.CreateOrUpdate(%q): end", *nic.Name)
 		if az.CloudProviderBackoff && shouldRetryAPIRequest(resp.Response, err) {
 			glog.V(2).Infof("nicupdate(%s) backing off: nic(%s) - updating, err=%v", serviceName, nicName, err)
