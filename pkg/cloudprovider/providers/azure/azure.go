@@ -187,12 +187,12 @@ type Cloud struct {
 	Config
 	Environment              azure.Environment
 	RoutesClient             network.RoutesClient
-	SubnetsClient            SubnetsClient
-	InterfacesClient         InterfacesClient
+	SubnetsClient            network.SubnetsClient
+	InterfacesClient         network.InterfacesClient
 	RouteTablesClient        network.RouteTablesClient
-	LoadBalancerClient       LoadBalancersClient
-	PublicIPAddressesClient  PublicIPAddressesClient
-	SecurityGroupsClient     SecurityGroupsClient
+	LoadBalancerClient       network.LoadBalancersClient
+	PublicIPAddressesClient  network.PublicIPAddressesClient
+	SecurityGroupsClient     network.SecurityGroupsClient
 	VirtualMachinesClient    compute.VirtualMachinesClient
 	StorageAccountClient     storage.AccountsClient
 	DisksClient              disk.DisksClient
