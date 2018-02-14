@@ -29,7 +29,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	storage "github.com/Azure/azure-sdk-for-go/arm/storage"
+	storage "github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/storage/mgmt/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/glog"

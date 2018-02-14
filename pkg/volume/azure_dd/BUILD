@@ -36,7 +36,7 @@ go_library(
         "//pkg/volume/util:go_default_library",
         "//pkg/volume/util/volumehelper:go_default_library",
         "//vendor/github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/compute/mgmt/compute:go_default_library",
-        "//vendor/github.com/Azure/azure-sdk-for-go/arm/storage:go_default_library",
+        "//vendor/github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/storage/mgmt/storage:go_default_library",
         "//vendor/github.com/golang/glog:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",
         "//vendor/k8s.io/apimachinery/pkg/api/resource:go_default_library",

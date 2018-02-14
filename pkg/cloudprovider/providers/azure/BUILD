@@ -38,7 +38,7 @@ go_library(
         "//vendor/github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/compute/mgmt/compute:go_default_library",
         "//vendor/github.com/Azure/azure-sdk-for-go/arm/disk:go_default_library",
         "//vendor/github.com/Azure/azure-sdk-for-go/arm/network:go_default_library",
-        "//vendor/github.com/Azure/azure-sdk-for-go/arm/storage:go_default_library",
+        "//vendor/github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/storage/mgmt/storage:go_default_library",
         "//vendor/github.com/Azure/azure-sdk-for-go/storage:go_default_library",
         "//vendor/github.com/Azure/go-autorest/autorest:go_default_library",
         "//vendor/github.com/Azure/go-autorest/autorest/adal:go_default_library",

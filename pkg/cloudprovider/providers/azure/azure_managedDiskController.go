@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/arm/disk"
-	storage "github.com/Azure/azure-sdk-for-go/arm/storage"
+	storage "github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/storage/mgmt/storage"
 	"github.com/golang/glog"
 	kwait "k8s.io/apimachinery/pkg/util/wait"
 )

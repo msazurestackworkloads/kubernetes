@@ -33,8 +33,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/arm/disk"
 	"github.com/Azure/azure-sdk-for-go/arm/network"
-	"github.com/Azure/azure-sdk-for-go/arm/storage"
 	"github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/compute/mgmt/compute"
+	"github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/storage/mgmt/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
