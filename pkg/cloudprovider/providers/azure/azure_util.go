@@ -17,6 +17,7 @@ limitations under the License.
 package azure
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"hash/crc32"
@@ -282,12 +283,12 @@ func getProtocolsFromKubernetesProtocol(protocol v1.Protocol) (*network.Transpor
 	switch protocol {
 	case v1.ProtocolTCP:
 		transportProto = network.TransportProtocolTCP
-		securityProto = network.SecurityRuleProtocolTCP
+		securityProto = network.TCP
 		probeProto = network.ProbeProtocolTCP
 		return &transportProto, &securityProto, &probeProto, nil
 	case v1.ProtocolUDP:
 		transportProto = network.TransportProtocolUDP
-		securityProto = network.SecurityRuleProtocolUDP
+		securityProto = network.UDP
 		return &transportProto, &securityProto, nil, nil
 	default:
 		return &transportProto, &securityProto, &probeProto, fmt.Errorf("Only TCP and UDP are supported for Azure LoadBalancers")
@@ -311,16 +312,18 @@ func getPrimaryInterfaceID(machine compute.VirtualMachine) (string, error) {
 }
 
 func getPrimaryIPConfig(nic network.Interface) (*network.InterfaceIPConfiguration, error) {
-	if len(*nic.IPConfigurations) == 1 {
+	// if len(*nic.IPConfigurations) == 1 {
+	// 	return &((*nic.IPConfigurations)[0]), nil
+	// }
+
+	// for _, ref := range *nic.IPConfigurations {
+	// 	if *ref.Primary {
+	// 		return &ref, nil
+	// 	}
+	// }
+	if len(*nic.IPConfigurations) > 0 {
 		return &((*nic.IPConfigurations)[0]), nil
 	}
-
-	for _, ref := range *nic.IPConfigurations {
-		if *ref.Primary {
-			return &ref, nil
-		}
-	}
-
 	return nil, fmt.Errorf("failed to determine the determine primary ipconfig. nicname=%q", *nic.Name)
 }
 
@@ -436,7 +439,8 @@ func (az *Cloud) getIPForStandardMachine(nodeName types.NodeName) (string, error
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("InterfacesClient.Get(%q): start", nicName)
-	nic, err := az.InterfacesClient.Get(az.ResourceGroup, nicName, "")
+	cntx := context.Background()
+	nic, err := az.InterfacesClient.Get(cntx, az.ResourceGroup, nicName, "")
 	glog.V(10).Infof("InterfacesClient.Get(%q): end", nicName)
 	if err != nil {
 		glog.Errorf("error: az.getIPForMachine(%s), az.InterfacesClient.Get(%s, %s, %s), err=%v", nodeName, az.ResourceGroup, nicName, "", err)

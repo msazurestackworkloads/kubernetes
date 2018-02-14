@@ -158,7 +158,8 @@ func (az *Cloud) getRouteTable() (routeTable network.RouteTable, exists bool, er
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("RouteTablesClient.Get(%s): start", az.RouteTableName)
-	routeTable, err = az.RouteTablesClient.Get(az.ResourceGroup, az.RouteTableName, "")
+	cntx := context.Background()
+	routeTable, err = az.RouteTablesClient.Get(cntx, az.ResourceGroup, az.RouteTableName, "")
 	glog.V(10).Infof("RouteTablesClient.Get(%s): end", az.RouteTableName)
 
 	exists, realErr = checkResourceExistsFromError(err)
@@ -178,7 +179,8 @@ func (az *Cloud) getSecurityGroup() (sg network.SecurityGroup, exists bool, err 
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("SecurityGroupsClient.Get(%s): start", az.SecurityGroupName)
-	sg, err = az.SecurityGroupsClient.Get(az.ResourceGroup, az.SecurityGroupName, "")
+	cntx := context.Background()
+	sg, err = az.SecurityGroupsClient.Get(cntx, az.ResourceGroup, az.SecurityGroupName, "")
 	glog.V(10).Infof("SecurityGroupsClient.Get(%s): end", az.SecurityGroupName)
 
 	exists, realErr = checkResourceExistsFromError(err)
@@ -197,7 +199,8 @@ func (az *Cloud) getAzureLoadBalancer(name string) (lb network.LoadBalancer, exi
 	var realErr error
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("LoadBalancerClient.Get(%s): start", name)
-	lb, err = az.LoadBalancerClient.Get(az.ResourceGroup, name, "")
+	cntx := context.Background()
+	lb, err = az.LoadBalancerClient.Get(cntx, az.ResourceGroup, name, "")
 	glog.V(10).Infof("LoadBalancerClient.Get(%s): end", name)
 
 	exists, realErr = checkResourceExistsFromError(err)
@@ -217,7 +220,10 @@ func (az *Cloud) listLoadBalancers() (lbListResult network.LoadBalancerListResul
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("LoadBalancerClient.List(%s): start", az.ResourceGroup)
-	lbListResult, err = az.LoadBalancerClient.List(az.ResourceGroup)
+	cntx := context.Background()
+	lbListResultPage, errPage := az.LoadBalancerClient.List(cntx, az.ResourceGroup)
+	lbListResult = lbListResultPage.Response()
+	err = errPage
 	glog.V(10).Infof("LoadBalancerClient.List(%s): end", az.ResourceGroup)
 	exists, realErr = checkResourceExistsFromError(err)
 	if realErr != nil {
@@ -236,7 +242,8 @@ func (az *Cloud) getPublicIPAddress(name string) (pip network.PublicIPAddress, e
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("PublicIPAddressesClient.Get(%s): start", name)
-	pip, err = az.PublicIPAddressesClient.Get(az.ResourceGroup, name, "")
+	cntx := context.Background()
+	pip, err = az.PublicIPAddressesClient.Get(cntx, az.ResourceGroup, name, "")
 	glog.V(10).Infof("PublicIPAddressesClient.Get(%s): end", name)
 
 	exists, realErr = checkResourceExistsFromError(err)
@@ -263,7 +270,8 @@ func (az *Cloud) getSubnet(virtualNetworkName string, subnetName string) (subnet
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("SubnetsClient.Get(%s): start", subnetName)
-	subnet, err = az.SubnetsClient.Get(rg, virtualNetworkName, subnetName, "")
+	cntx := context.Background()
+	subnet, err = az.SubnetsClient.Get(cntx, rg, virtualNetworkName, subnetName, "")
 	glog.V(10).Infof("SubnetsClient.Get(%s): end", subnetName)
 
 	exists, realErr = checkResourceExistsFromError(err)

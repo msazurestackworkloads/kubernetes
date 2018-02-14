@@ -17,6 +17,7 @@ limitations under the License.
 package azure
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -52,7 +53,8 @@ func (az *Cloud) getIPForVmssMachine(nodeName types.NodeName) (string, error) {
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("InterfacesClient.Get(%q): start", nicName)
-	nic, err := az.InterfacesClient.GetVirtualMachineScaleSetNetworkInterface(az.ResourceGroup, az.Config.PrimaryScaleSetName, *machine.InstanceID, nicName, "")
+	cntx := context.Background()
+	nic, err := az.InterfacesClient.GetVirtualMachineScaleSetNetworkInterface(cntx, az.ResourceGroup, az.Config.PrimaryScaleSetName, *machine.InstanceID, nicName, "")
 	glog.V(10).Infof("InterfacesClient.Get(%q): end", nicName)
 	if err != nil {
 		glog.Errorf("error: az.getIPForVmssMachine(%s), az.GetVirtualMachineScaleSetNetworkInterface.Get(%s, %s, %s), err=%v", nodeName, az.ResourceGroup, nicName, "", err)
