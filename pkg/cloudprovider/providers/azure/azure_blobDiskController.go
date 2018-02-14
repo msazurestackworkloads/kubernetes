@@ -317,7 +317,7 @@ func (c *BlobDiskController) getStorageAccountKey(SAName string) (string, error)
 	if account, exists := c.accounts[SAName]; exists && account.key != "" {
 		return c.accounts[SAName].key, nil
 	}
-	cntx := context.background()
+	cntx := context.Background()
 	listKeysResult, err := c.common.cloud.StorageAccountClient.ListKeys(cntx, c.common.resourceGroup, SAName)
 	if err != nil {
 		return "", err
