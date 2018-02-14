@@ -182,9 +182,10 @@ func (c *controllerCommon) DetachDiskByName(diskName, diskURI string, nodeName t
 	vmName := mapNodeNameToVMName(nodeName)
 	glog.V(2).Infof("azureDisk - update(%s): vm(%s) - detach disk", c.resourceGroup, vmName)
 	c.cloud.operationPollRateLimiter.Accept()
-	respChan, errChan := c.cloud.VirtualMachinesClient.CreateOrUpdate(c.resourceGroup, vmName, newVM, nil)
-	resp := <-respChan
-	err = <-errChan
+	cntx := context.Background()
+	future, _ := c.cloud.VirtualMachinesClient.CreateOrUpdate(cntx, c.resourceGroup, vmName, newVM)
+	resp, errf := future.Result(c.cloud.VirtualMachinesClient)
+	err = errf
 	if c.cloud.CloudProviderBackoff && shouldRetryAPIRequest(resp.Response, err) {
 		glog.V(2).Infof("azureDisk - update(%s) backing off: vm(%s)", c.resourceGroup, vmName)
 		retryErr := c.cloud.CreateOrUpdateVMWithRetry(vmName, newVM)

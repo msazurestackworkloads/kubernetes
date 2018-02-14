@@ -17,6 +17,7 @@ limitations under the License.
 package azure
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"sync"
@@ -103,7 +104,8 @@ func (az *Cloud) getVirtualMachine(nodeName types.NodeName) (vm compute.VirtualM
 			// Consider adding separate parameter for controlling 'InstanceView' once node update issue #56276 is fixed
 			az.operationPollRateLimiter.Accept()
 			glog.V(10).Infof("VirtualMachinesClient.Get(%s): start", vmName)
-			vm, err = az.VirtualMachinesClient.Get(az.ResourceGroup, vmName, compute.InstanceView)
+			cntx := context.Background()
+			vm, err = az.VirtualMachinesClient.Get(cntx, az.ResourceGroup, vmName, compute.InstanceView)
 			glog.V(10).Infof("VirtualMachinesClient.Get(%s): end", vmName)
 
 			exists, realErr := checkResourceExistsFromError(err)
@@ -135,7 +137,8 @@ func (az *Cloud) getVmssVirtualMachine(nodeName types.NodeName) (vm compute.Virt
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("VirtualMachineScaleSetVMsClient.Get(%s): start", vmName)
-	vm, err = az.VirtualMachineScaleSetVMsClient.Get(az.ResourceGroup, az.PrimaryScaleSetName, instanceID)
+	cntx := context.Background()
+	vm, err = az.VirtualMachineScaleSetVMsClient.Get(cntx, az.ResourceGroup, az.PrimaryScaleSetName, instanceID)
 	glog.V(10).Infof("VirtualMachineScaleSetVMsClient.Get(%s): end", vmName)
 
 	exists, realErr = checkResourceExistsFromError(err)
