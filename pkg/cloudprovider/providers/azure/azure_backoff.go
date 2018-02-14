@@ -193,7 +193,7 @@ func (az *Cloud) ListLBWithRetry() ([]network.LoadBalancer, error) {
 		glog.V(10).Infof("LoadBalancerClient.List(%v): start", az.ResourceGroup)
 		cntx := context.Background()
 		resultPage, retryErr = az.LoadBalancerClient.List(cntx, az.ResourceGroup)
-		result = resultPage.Response
+		result = resultPage.Response()
 		glog.V(10).Infof("LoadBalancerClient.List(%v): end", az.ResourceGroup)
 		if retryErr != nil {
 			glog.Errorf("LoadBalancerClient.List(%v) - backoff: failure, will retry,err=%v",

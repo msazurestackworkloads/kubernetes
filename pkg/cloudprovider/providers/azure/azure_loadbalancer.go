@@ -17,6 +17,7 @@ limitations under the License.
 package azure
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"strconv"
@@ -416,7 +417,8 @@ func (az *Cloud) ensurePublicIPExists(serviceName, pipName, domainNameLabel stri
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("PublicIPAddressesClient.Get(%q): start", *pip.Name)
-	pip, err = az.PublicIPAddressesClient.Get(az.ResourceGroup, *pip.Name, "")
+	cntx := context.Background()
+	pip, err = az.PublicIPAddressesClient.Get(cntx, az.ResourceGroup, *pip.Name, "")
 	glog.V(10).Infof("PublicIPAddressesClient.Get(%q): end", *pip.Name)
 	if err != nil {
 		return nil, err
@@ -802,7 +804,8 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 
 	az.operationPollRateLimiter.Accept()
 	glog.V(10).Infof("SecurityGroupsClient.Get(%q): start", az.SecurityGroupName)
-	sg, err := az.SecurityGroupsClient.Get(az.ResourceGroup, az.SecurityGroupName, "")
+	cntx := context.Background()
+	sg, err := az.SecurityGroupsClient.Get(cntx, az.ResourceGroup, az.SecurityGroupName, "")
 	glog.V(10).Infof("SecurityGroupsClient.Get(%q): end", az.SecurityGroupName)
 	if err != nil {
 		return nil, err
@@ -854,8 +857,8 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
 						SourceAddressPrefix:      to.StringPtr(sourceAddressPrefixes[j]),
 						DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
-						Access:    network.SecurityRuleAccessAllow,
-						Direction: network.SecurityRuleDirectionInbound,
+						Access:    network.Allow,
+						Direction: network.Inbound,
 					},
 				}
 			}
@@ -874,7 +877,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 	}
 
 	for _, r := range updatedRules {
-		glog.V(10).Infof("Existing security rule while processing %s: %s:%s -> %s:%s", service.Name, logSafe(r.SourceAddressPrefix), logSafe(r.SourcePortRange), logSafeCollection(r.DestinationAddressPrefix, r.DestinationAddressPrefixes), logSafe(r.DestinationPortRange))
+		glog.V(10).Infof("Existing security rule while processing %s: %s:%s -> %s:%s", service.Name, logSafe(r.SourceAddressPrefix), logSafe(r.SourcePortRange), logSafe(r.DestinationAddressPrefix) /* logSafeCollection(r.DestinationAddressPrefix, r.DestinationAddressPrefixes)*/, logSafe(r.DestinationPortRange))
 	}
 
 	// update security rules: remove unwanted rules that belong privately
@@ -906,23 +909,29 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 					glog.V(4).Infof("Expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
 					return nil, fmt.Errorf("Expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
 				}
-				if sharedRule.DestinationAddressPrefixes == nil {
+				// if sharedRule.DestinationAddressPrefixes == nil {
+				// 	glog.V(4).Infof("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
+				// 	return nil, fmt.Errorf("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
+				// }
+				if sharedRule.DestinationAddressPrefix == nil {
 					glog.V(4).Infof("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
 					return nil, fmt.Errorf("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
 				}
-				existingPrefixes := *sharedRule.DestinationAddressPrefixes
-				addressIndex, found := findIndex(existingPrefixes, destinationIPAddress)
+				// existingPrefixes := *sharedRule.DestinationAddressPrefixes
+				existingPrefixes := *sharedRule.DestinationAddressPrefix
+				// addressIndex, found := findIndex(existingPrefixes, destinationIPAddress)
+				_, found := compareString(existingPrefixes, destinationIPAddress)
 				if !found {
 					glog.V(4).Infof("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
 					return nil, fmt.Errorf("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
 				}
-				if len(existingPrefixes) == 1 {
-					updatedRules = append(updatedRules[:sharedIndex], updatedRules[sharedIndex+1:]...)
-				} else {
-					newDestinations := append(existingPrefixes[:addressIndex], existingPrefixes[addressIndex+1:]...)
-					sharedRule.DestinationAddressPrefixes = &newDestinations
-					updatedRules[sharedIndex] = sharedRule
-				}
+				//if len(existingPrefixes) == 1 {
+				updatedRules = append(updatedRules[:sharedIndex], updatedRules[sharedIndex+1:]...)
+				// } else {
+				// 	newDestinations := append(existingPrefixes[:addressIndex], existingPrefixes[addressIndex+1:]...)
+				// 	sharedRule.DestinationAddressPrefixes = &newDestinations
+				// 	updatedRules[sharedIndex] = sharedRule
+				// }
 				dirtySg = true
 			}
 		}
@@ -966,7 +975,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 	}
 
 	for _, r := range updatedRules {
-		glog.V(10).Infof("Updated security rule while processing %s: %s:%s -> %s:%s", service.Name, logSafe(r.SourceAddressPrefix), logSafe(r.SourcePortRange), logSafeCollection(r.DestinationAddressPrefix, r.DestinationAddressPrefixes), logSafe(r.DestinationPortRange))
+		glog.V(10).Infof("Updated security rule while processing %s: %s:%s -> %s:%s", service.Name, logSafe(r.SourceAddressPrefix), logSafe(r.SourcePortRange), logSafe(r.DestinationAddressPrefix) /* logSafeCollection(r.DestinationAddressPrefix, r.DestinationAddressPrefixes)*/, logSafe(r.DestinationPortRange))
 	}
 
 	if dirtySg {
@@ -1023,6 +1032,13 @@ func findIndex(strs []string, s string) (int, bool) {
 		if strings.EqualFold(str, s) {
 			return index, true
 		}
+	}
+	return 0, false
+}
+
+func compareString(strs string, s string) (int, bool) {
+	if strings.EqualFold(strs, s) {
+		return 1, true
 	}
 	return 0, false
 }
