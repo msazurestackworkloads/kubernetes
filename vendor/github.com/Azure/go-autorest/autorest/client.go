@@ -16,7 +16,6 @@ package autorest
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -225,11 +224,12 @@ func (c Client) Do(r *http.Request) (*http.Response, error) {
 // sender returns the Sender to which to send requests.
 func (c Client) sender() Sender {
 	if c.Sender == nil {
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+		// tr := &http.Transport{
+		// 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		// }
 		j, _ := cookiejar.New(nil)
-		return &http.Client{Jar: j, Transport: tr}
+		// return &http.Client{Jar: j, Transport: tr}
+		return &http.Client{Jar: j}
 	}
 	return c.Sender
 }

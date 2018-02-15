@@ -18,7 +18,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -279,18 +278,19 @@ func NewServicePrincipalTokenWithSecret(oauthConfig OAuthConfig, id string, reso
 	if secret == nil {
 		return nil, fmt.Errorf("parameter 'secret' cannot be nil")
 	}
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
+	// tr := &http.Transport{
+	// 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	// }
 	spt := &ServicePrincipalToken{
-		oauthConfig:      oauthConfig,
-		secret:           secret,
-		clientID:         id,
-		resource:         resource,
-		autoRefresh:      true,
-		autoRefreshLock:  &sync.Mutex{},
-		refreshWithin:    defaultRefresh,
-		sender:           &http.Client{Transport: tr},
+		oauthConfig:     oauthConfig,
+		secret:          secret,
+		clientID:        id,
+		resource:        resource,
+		autoRefresh:     true,
+		autoRefreshLock: &sync.Mutex{},
+		refreshWithin:   defaultRefresh,
+		//sender:           &http.Client{Transport: tr},
+		sender:           &http.Client{},
 		refreshCallbacks: callbacks,
 	}
 	return spt, nil
