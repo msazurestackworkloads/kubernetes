@@ -30,7 +30,7 @@ import (
 	"k8s.io/kubernetes/pkg/cloudprovider"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/compute/mgmt/compute"
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/network/mgmt/network"
+	"github.com/Azure/azure-sdk-for-go/profiles/2017-03-09/network/mgmt/network"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -312,18 +312,18 @@ func getPrimaryInterfaceID(machine compute.VirtualMachine) (string, error) {
 }
 
 func getPrimaryIPConfig(nic network.Interface) (*network.InterfaceIPConfiguration, error) {
-	// if len(*nic.IPConfigurations) == 1 {
-	// 	return &((*nic.IPConfigurations)[0]), nil
-	// }
-
-	// for _, ref := range *nic.IPConfigurations {
-	// 	if *ref.Primary {
-	// 		return &ref, nil
-	// 	}
-	// }
-	if len(*nic.IPConfigurations) > 0 {
+	if len(*nic.IPConfigurations) == 1 {
 		return &((*nic.IPConfigurations)[0]), nil
 	}
+
+	for _, ref := range *nic.IPConfigurations {
+		if *ref.Primary {
+			return &ref, nil
+		}
+	}
+	// if len(*nic.IPConfigurations) > 0 {
+	// 	return &((*nic.IPConfigurations)[0]), nil
+	// }
 	return nil, fmt.Errorf("failed to determine the determine primary ipconfig. nicname=%q", *nic.Name)
 }
 
