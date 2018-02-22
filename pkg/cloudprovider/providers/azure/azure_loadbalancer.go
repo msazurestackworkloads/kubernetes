@@ -854,7 +854,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 					SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
 						Protocol:                 *securityProto,
 						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
+						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.NodePort))),
 						SourceAddressPrefix:      to.StringPtr(sourceAddressPrefixes[j]),
 						DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
 						Access:    network.Allow,
@@ -904,35 +904,36 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 		for _, port := range ports {
 			for _, sourceAddressPrefix := range sourceAddressPrefixes {
 				sharedRuleName := getSecurityRuleName(service, port, sourceAddressPrefix)
-				sharedIndex, sharedRule, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
+				// sharedIndex, sharedRule, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
+				_, _, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
 				if !sharedRuleFound {
 					glog.V(4).Infof("Expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
 					return nil, fmt.Errorf("Expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
 				}
 				// if sharedRule.DestinationAddressPrefixes == nil {
+				glog.V(4).Infof("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
+				return nil, fmt.Errorf("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
+				// }
+				// if sharedRule.DestinationAddressPrefix == nil {
 				// 	glog.V(4).Infof("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
 				// 	return nil, fmt.Errorf("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
 				// }
-				if sharedRule.DestinationAddressPrefix == nil {
-					glog.V(4).Infof("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
-					return nil, fmt.Errorf("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
-				}
-				// existingPrefixes := *sharedRule.DestinationAddressPrefixes
-				existingPrefixes := *sharedRule.DestinationAddressPrefix
-				// addressIndex, found := findIndex(existingPrefixes, destinationIPAddress)
-				_, found := compareString(existingPrefixes, destinationIPAddress)
-				if !found {
-					glog.V(4).Infof("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
-					return nil, fmt.Errorf("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
-				}
-				//if len(existingPrefixes) == 1 {
-				updatedRules = append(updatedRules[:sharedIndex], updatedRules[sharedIndex+1:]...)
-				// } else {
-				// 	newDestinations := append(existingPrefixes[:addressIndex], existingPrefixes[addressIndex+1:]...)
-				// 	sharedRule.DestinationAddressPrefixes = &newDestinations
-				// 	updatedRules[sharedIndex] = sharedRule
+				// // existingPrefixes := *sharedRule.DestinationAddressPrefixes
+				// existingPrefixes := *sharedRule.DestinationAddressPrefix
+				// // addressIndex, found := findIndex(existingPrefixes, destinationIPAddress)
+				// _, found := compareString(existingPrefixes, destinationIPAddress)
+				// if !found {
+				// 	glog.V(4).Infof("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
+				// 	return nil, fmt.Errorf("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
 				// }
-				dirtySg = true
+				// //if len(existingPrefixes) == 1 {
+				// updatedRules = append(updatedRules[:sharedIndex], updatedRules[sharedIndex+1:]...)
+				// // } else {
+				// // 	newDestinations := append(existingPrefixes[:addressIndex], existingPrefixes[addressIndex+1:]...)
+				// // 	sharedRule.DestinationAddressPrefixes = &newDestinations
+				// // 	updatedRules[sharedIndex] = sharedRule
+				// // }
+				// dirtySg = true
 			}
 		}
 	}
@@ -1072,7 +1073,7 @@ func makeConsolidatable(rule network.SecurityRule) network.SecurityRule {
 			SourceAddressPrefix: rule.SourceAddressPrefix,
 			//SourceAddressPrefixes:      rule.SourceAddressPrefixes,
 			// DestinationAddressPrefixes: collectionOrSingle(rule.DestinationAddressPrefixes, rule.DestinationAddressPrefix),
-			DestinationAddressPrefix: rule.DestinationAddressPrefix,
+			//DestinationAddressPrefix: rule.DestinationAddressPrefix,
 			Access:    rule.Access,
 			Direction: rule.Direction,
 		},
@@ -1095,7 +1096,7 @@ func consolidate(existingRule network.SecurityRule, newRule network.SecurityRule
 			SourceAddressPrefix: existingRule.SourceAddressPrefix,
 			//SourceAddressPrefixes:      existingRule.SourceAddressPrefixes,
 			//DestinationAddressPrefixes: destinations,
-			DestinationAddressPrefix: newRule.DestinationAddressPrefix,
+			//DestinationAddressPrefix: newRule.DestinationAddressPrefix,
 			Access:    existingRule.Access,
 			Direction: existingRule.Direction,
 		},
