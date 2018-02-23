@@ -107,7 +107,6 @@ func (az *Cloud) VirtualMachineClientListWithRetry() ([]compute.VirtualMachine, 
 	}
 
 	appendResults := (result.Value != nil && len(*result.Value) > 0)
-	//appendResults := resultPage.NotDone()
 	for appendResults {
 		allNodes = append(allNodes, *result.Value...)
 		appendResults = false
@@ -117,7 +116,6 @@ func (az *Cloud) VirtualMachineClientListWithRetry() ([]compute.VirtualMachine, 
 				var retryErr error
 				az.operationPollRateLimiter.Accept()
 				glog.V(10).Infof("VirtualMachinesClient.ListNextResults(%v): start", az.ResourceGroup)
-				//result, retryErr = az.VirtualMachinesClient.ListNextResults(result)
 				retryErr = resultPage.Next()
 				result = resultPage.Response()
 				glog.V(10).Infof("VirtualMachinesClient.ListNextResults(%v): end", az.ResourceGroup)
@@ -219,7 +217,6 @@ func (az *Cloud) ListLBWithRetry() ([]network.LoadBalancer, error) {
 				var retryErr error
 				az.operationPollRateLimiter.Accept()
 				glog.V(10).Infof("LoadBalancerClient.ListNextResults(%v): start", az.ResourceGroup)
-				// result, retryErr = az.LoadBalancerClient.ListNextResults(result)
 				retryErr = resultPage.Next()
 				result = resultPage.Response()
 				glog.V(10).Infof("LoadBalancerClient.ListNextResults(%v): end", az.ResourceGroup)
@@ -279,7 +276,6 @@ func (az *Cloud) ListPIPWithRetry() ([]network.PublicIPAddress, error) {
 				var retryErr error
 				az.operationPollRateLimiter.Accept()
 				glog.V(10).Infof("PublicIPAddressesClient.ListNextResults(%v): start", az.ResourceGroup)
-				// result, retryErr = az.PublicIPAddressesClient.ListNextResults(result)
 				retryErr = resultPage.Next()
 				result = resultPage.Response()
 				glog.V(10).Infof("PublicIPAddressesClient.ListNextResults(%v): end", az.ResourceGroup)

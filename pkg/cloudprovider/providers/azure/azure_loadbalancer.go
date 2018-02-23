@@ -852,11 +852,10 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 				expectedSecurityRules[ix] = network.SecurityRule{
 					Name: to.StringPtr(securityRuleName),
 					SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-						Protocol:             *securityProto,
-						SourcePortRange:      to.StringPtr("*"),
-						DestinationPortRange: to.StringPtr(strconv.Itoa(int(port.NodePort))),
-						SourceAddressPrefix:  to.StringPtr(sourceAddressPrefixes[j]),
-						// DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
+						Protocol:                 *securityProto,
+						SourcePortRange:          to.StringPtr("*"),
+						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.NodePort))),
+						SourceAddressPrefix:      to.StringPtr(sourceAddressPrefixes[j]),
 						DestinationAddressPrefix: to.StringPtr("*"),
 						Access:    network.Allow,
 						Direction: network.Inbound,
@@ -906,7 +905,6 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 			for _, sourceAddressPrefix := range sourceAddressPrefixes {
 				sharedRuleName := getSecurityRuleName(service, port, sourceAddressPrefix)
 				sharedIndex, sharedRule, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
-				//_, _, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
 				if !sharedRuleFound {
 					glog.V(4).Infof("Expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
 					return nil, fmt.Errorf("Expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
@@ -1028,13 +1026,6 @@ func findIndex(strs []string, s string) (int, bool) {
 		if strings.EqualFold(str, s) {
 			return index, true
 		}
-	}
-	return 0, false
-}
-
-func compareString(strs string, s string) (int, bool) {
-	if strings.EqualFold(strs, s) {
-		return 1, true
 	}
 	return 0, false
 }

@@ -528,11 +528,9 @@ func (c *BlobDiskController) createStorageAccount(storageAccountName string, sto
 			Sku:      &storage.Sku{Name: storageAccountType},
 			Tags:     &map[string]*string{"created-by": to.StringPtr("azure-dd")},
 			Location: &location}
-		//cancel := make(chan struct{})
 		cntx := context.Background()
 		future, _ := c.common.cloud.StorageAccountClient.Create(cntx, c.common.resourceGroup, storageAccountName, cp)
 		_, err := future.Result(c.common.cloud.StorageAccountClient)
-		// err := <-errChan
 		if err != nil {
 			return fmt.Errorf(fmt.Sprintf("Create Storage Account: %s, error: %s", storageAccountName, err))
 		}

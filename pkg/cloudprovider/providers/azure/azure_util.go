@@ -321,9 +321,6 @@ func getPrimaryIPConfig(nic network.Interface) (*network.InterfaceIPConfiguratio
 			return &ref, nil
 		}
 	}
-	// if len(*nic.IPConfigurations) > 0 {
-	// 	return &((*nic.IPConfigurations)[0]), nil
-	// }
 	return nil, fmt.Errorf("failed to determine the determine primary ipconfig. nicname=%q", *nic.Name)
 }
 

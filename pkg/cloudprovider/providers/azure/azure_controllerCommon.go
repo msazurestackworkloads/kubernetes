@@ -77,6 +77,7 @@ func (c *controllerCommon) AttachDisk(isManagedDisk bool, diskName, diskURI stri
 		return err
 	}
 
+	// Azure GO SDK 2016-03-09 profile does not support ManagedDisk. So, isManagedDisk is always set to false. In addition all the references to ManagedDisk are commented out.
 	isManagedDisk = false
 	disks := *vm.StorageProfile.DataDisks
 	if isManagedDisk {
@@ -116,8 +117,8 @@ func (c *controllerCommon) AttachDisk(isManagedDisk bool, diskName, diskURI stri
 	c.cloud.operationPollRateLimiter.Accept()
 	cntx := context.Background()
 	future, _ := c.cloud.VirtualMachinesClient.CreateOrUpdate(cntx, c.resourceGroup, vmName, newVM)
-	resp, errf := future.Result(c.cloud.VirtualMachinesClient)
-	err = errf
+	resp, errFuture := future.Result(c.cloud.VirtualMachinesClient)
+	err = errFuture
 	if c.cloud.CloudProviderBackoff && shouldRetryAPIRequest(resp.Response, err) {
 		glog.V(2).Infof("azureDisk - update(%s) backing off: vm(%s)", c.resourceGroup, vmName)
 		retryErr := c.cloud.CreateOrUpdateVMWithRetry(vmName, newVM)
@@ -157,8 +158,7 @@ func (c *controllerCommon) DetachDiskByName(diskName, diskURI string, nodeName t
 	for i, disk := range disks {
 		if disk.Lun != nil && (disk.Name != nil && diskName != "" && *disk.Name == diskName) ||
 			(disk.Vhd != nil && disk.Vhd.URI != nil && diskURI != "" && *disk.Vhd.URI == diskURI) {
-			// ||
-			// (disk.ManagedDisk != nil && diskURI != "" && *disk.ManagedDisk.ID == diskURI) {
+			// || (disk.ManagedDisk != nil && diskURI != "" && *disk.ManagedDisk.ID == diskURI) {
 			// found the disk
 			glog.V(4).Infof("azureDisk - detach disk: name %q uri %q", diskName, diskURI)
 			disks = append(disks[:i], disks[i+1:]...)
@@ -184,8 +184,8 @@ func (c *controllerCommon) DetachDiskByName(diskName, diskURI string, nodeName t
 	c.cloud.operationPollRateLimiter.Accept()
 	cntx := context.Background()
 	future, _ := c.cloud.VirtualMachinesClient.CreateOrUpdate(cntx, c.resourceGroup, vmName, newVM)
-	resp, errf := future.Result(c.cloud.VirtualMachinesClient)
-	err = errf
+	resp, errFuture := future.Result(c.cloud.VirtualMachinesClient)
+	err = errFuture
 	if c.cloud.CloudProviderBackoff && shouldRetryAPIRequest(resp.Response, err) {
 		glog.V(2).Infof("azureDisk - update(%s) backing off: vm(%s)", c.resourceGroup, vmName)
 		retryErr := c.cloud.CreateOrUpdateVMWithRetry(vmName, newVM)
@@ -214,8 +214,7 @@ func (c *controllerCommon) GetDiskLun(diskName, diskURI string, nodeName types.N
 	for _, disk := range disks {
 		if disk.Lun != nil && (disk.Name != nil && diskName != "" && *disk.Name == diskName) ||
 			(disk.Vhd != nil && disk.Vhd.URI != nil && diskURI != "" && *disk.Vhd.URI == diskURI) {
-			// ||
-			// (disk.ManagedDisk != nil && *disk.ManagedDisk.ID == diskURI) {
+			// || (disk.ManagedDisk != nil && *disk.ManagedDisk.ID == diskURI) {
 			// found the disk
 			glog.V(4).Infof("azureDisk - find disk: lun %d name %q uri %q", *disk.Lun, diskName, diskURI)
 			return *disk.Lun, nil
