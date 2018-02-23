@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strconv"
 	"strings"
 
 	"k8s.io/api/core/v1"
@@ -852,9 +851,10 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 				expectedSecurityRules[ix] = network.SecurityRule{
 					Name: to.StringPtr(securityRuleName),
 					SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-						Protocol:                 *securityProto,
-						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
+						Protocol:        *securityProto,
+						SourcePortRange: to.StringPtr("*"),
+						//DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
+						DestinationPortRange:     to.StringPtr("*"),
 						SourceAddressPrefix:      to.StringPtr(sourceAddressPrefixes[j]),
 						DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
 						Access:    network.Allow,
