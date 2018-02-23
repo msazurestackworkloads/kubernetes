@@ -5896,8 +5896,16 @@ type SecurityRulePropertiesFormat struct {
 	DestinationPortRange *string `json:"destinationPortRange,omitempty"`
 	// SourceAddressPrefix - The CIDR or source IP range. Asterix '*' can also be used to match all source IPs. Default tags such as 'VirtualNetwork', 'AzureLoadBalancer' and 'Internet' can also be used. If this is an ingress rule, specifies where network traffic originates from.
 	SourceAddressPrefix *string `json:"sourceAddressPrefix,omitempty"`
+	// SourceAddressPrefixes - The CIDR or source IP ranges.
+	SourceAddressPrefixes *[]string `json:"sourceAddressPrefixes,omitempty"`
 	// DestinationAddressPrefix - The destination address prefix. CIDR or source IP range. Asterix '*' can also be used to match all source IPs. Default tags such as 'VirtualNetwork', 'AzureLoadBalancer' and 'Internet' can also be used.
 	DestinationAddressPrefix *string `json:"destinationAddressPrefix,omitempty"`
+	// DestinationAddressPrefixes - The destination address prefixes. CIDR or destination IP ranges.
+	DestinationAddressPrefixes *[]string `json:"destinationAddressPrefixes,omitempty"`
+	// SourcePortRanges - The source port ranges.
+	SourcePortRanges *[]string `json:"sourcePortRanges,omitempty"`
+	// DestinationPortRanges - The destination port ranges.
+	DestinationPortRanges *[]string `json:"destinationPortRanges,omitempty"`
 	// Access - The network traffic is allowed or denied. Possible values are: 'Allow' and 'Deny'. Possible values include: 'Allow', 'Deny'
 	Access SecurityRuleAccess `json:"access,omitempty"`
 	// Priority - The priority of the rule. The value can be between 100 and 4096. The priority number must be unique for each rule in the collection. The lower the priority number, the higher the priority of the rule.
