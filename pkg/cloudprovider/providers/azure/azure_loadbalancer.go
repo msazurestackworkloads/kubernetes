@@ -855,8 +855,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 						Protocol:             *securityProto,
 						SourcePortRange:      to.StringPtr("*"),
 						DestinationPortRange: to.StringPtr(strconv.Itoa(int(port.NodePort))),
-						// DestinationPortRange:     to.StringPtr("*"),
-						SourceAddressPrefix: to.StringPtr(sourceAddressPrefixes[j]),
+						SourceAddressPrefix:  to.StringPtr(sourceAddressPrefixes[j]),
 						// DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
 						DestinationAddressPrefix: to.StringPtr("*"),
 						Access:    network.Allow,
@@ -879,7 +878,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 	}
 
 	for _, r := range updatedRules {
-		glog.V(10).Infof("Existing security rule while processing %s: %s:%s -> %s:%s", service.Name, logSafe(r.SourceAddressPrefix), logSafe(r.SourcePortRange), logSafe(r.DestinationAddressPrefix) /* logSafeCollection(r.DestinationAddressPrefix, r.DestinationAddressPrefixes)*/, logSafe(r.DestinationPortRange))
+		glog.V(10).Infof("Existing security rule while processing %s: %s:%s -> %s:%s", service.Name, logSafe(r.SourceAddressPrefix), logSafe(r.SourcePortRange), logSafeCollection(r.DestinationAddressPrefix, r.DestinationAddressPrefixes), logSafe(r.DestinationPortRange))
 	}
 
 	// update security rules: remove unwanted rules that belong privately
@@ -906,36 +905,30 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 		for _, port := range ports {
 			for _, sourceAddressPrefix := range sourceAddressPrefixes {
 				sharedRuleName := getSecurityRuleName(service, port, sourceAddressPrefix)
-				// sharedIndex, sharedRule, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
-				_, _, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
+				sharedIndex, sharedRule, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
+				//_, _, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
 				if !sharedRuleFound {
 					glog.V(4).Infof("Expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
 					return nil, fmt.Errorf("Expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
 				}
-				// if sharedRule.DestinationAddressPrefixes == nil {
-				glog.V(4).Infof("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
-				return nil, fmt.Errorf("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
-				// }
-				// if sharedRule.DestinationAddressPrefix == nil {
-				// 	glog.V(4).Infof("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
-				// 	return nil, fmt.Errorf("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
-				// }
-				// // existingPrefixes := *sharedRule.DestinationAddressPrefixes
-				// existingPrefixes := *sharedRule.DestinationAddressPrefix
-				// // addressIndex, found := findIndex(existingPrefixes, destinationIPAddress)
-				// _, found := compareString(existingPrefixes, destinationIPAddress)
-				// if !found {
-				// 	glog.V(4).Infof("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
-				// 	return nil, fmt.Errorf("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
-				// }
-				// //if len(existingPrefixes) == 1 {
-				// updatedRules = append(updatedRules[:sharedIndex], updatedRules[sharedIndex+1:]...)
-				// // } else {
-				// // 	newDestinations := append(existingPrefixes[:addressIndex], existingPrefixes[addressIndex+1:]...)
-				// // 	sharedRule.DestinationAddressPrefixes = &newDestinations
-				// // 	updatedRules[sharedIndex] = sharedRule
-				// // }
-				// dirtySg = true
+				if sharedRule.DestinationAddressPrefixes == nil {
+					glog.V(4).Infof("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
+					return nil, fmt.Errorf("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
+				}
+				existingPrefixes := *sharedRule.DestinationAddressPrefixes
+				addressIndex, found := findIndex(existingPrefixes, destinationIPAddress)
+				if !found {
+					glog.V(4).Infof("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
+					return nil, fmt.Errorf("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
+				}
+				if len(existingPrefixes) == 1 {
+					updatedRules = append(updatedRules[:sharedIndex], updatedRules[sharedIndex+1:]...)
+				} else {
+					newDestinations := append(existingPrefixes[:addressIndex], existingPrefixes[addressIndex+1:]...)
+					sharedRule.DestinationAddressPrefixes = &newDestinations
+					updatedRules[sharedIndex] = sharedRule
+				}
+				dirtySg = true
 			}
 		}
 	}
@@ -978,7 +971,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 	}
 
 	for _, r := range updatedRules {
-		glog.V(10).Infof("Updated security rule while processing %s: %s:%s -> %s:%s", service.Name, logSafe(r.SourceAddressPrefix), logSafe(r.SourcePortRange), logSafe(r.DestinationAddressPrefix) /* logSafeCollection(r.DestinationAddressPrefix, r.DestinationAddressPrefixes)*/, logSafe(r.DestinationPortRange))
+		glog.V(10).Infof("Updated security rule while processing %s: %s:%s -> %s:%s", service.Name, logSafe(r.SourceAddressPrefix), logSafe(r.SourcePortRange), logSafeCollection(r.DestinationAddressPrefix, r.DestinationAddressPrefixes), logSafe(r.DestinationPortRange))
 	}
 
 	if dirtySg {
@@ -1066,16 +1059,15 @@ func makeConsolidatable(rule network.SecurityRule) network.SecurityRule {
 	return network.SecurityRule{
 		Name: rule.Name,
 		SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-			Priority:        rule.Priority,
-			Protocol:        rule.Protocol,
-			SourcePortRange: rule.SourcePortRange,
-			//SourcePortRanges:           rule.SourcePortRanges,
-			DestinationPortRange: rule.DestinationPortRange,
-			//DestinationPortRanges:      rule.DestinationPortRanges,
-			SourceAddressPrefix: rule.SourceAddressPrefix,
-			//SourceAddressPrefixes:      rule.SourceAddressPrefixes,
-			// DestinationAddressPrefixes: collectionOrSingle(rule.DestinationAddressPrefixes, rule.DestinationAddressPrefix),
-			//DestinationAddressPrefix: rule.DestinationAddressPrefix,
+			Priority:                   rule.Priority,
+			Protocol:                   rule.Protocol,
+			SourcePortRange:            rule.SourcePortRange,
+			SourcePortRanges:           rule.SourcePortRanges,
+			DestinationPortRange:       rule.DestinationPortRange,
+			DestinationPortRanges:      rule.DestinationPortRanges,
+			SourceAddressPrefix:        rule.SourceAddressPrefix,
+			SourceAddressPrefixes:      rule.SourceAddressPrefixes,
+			DestinationAddressPrefixes: collectionOrSingle(rule.DestinationAddressPrefixes, rule.DestinationAddressPrefix),
 			Access:    rule.Access,
 			Direction: rule.Direction,
 		},
@@ -1083,22 +1075,21 @@ func makeConsolidatable(rule network.SecurityRule) network.SecurityRule {
 }
 
 func consolidate(existingRule network.SecurityRule, newRule network.SecurityRule) network.SecurityRule {
-	// destinations := appendElements(existingRule.SecurityRulePropertiesFormat.DestinationAddressPrefixes, newRule.DestinationAddressPrefix, newRule.DestinationAddressPrefixes)
-	// destinations = deduplicate(destinations) // there are transient conditions during controller startup where it tries to add a service that is already added
+	destinations := appendElements(existingRule.SecurityRulePropertiesFormat.DestinationAddressPrefixes, newRule.DestinationAddressPrefix, newRule.DestinationAddressPrefixes)
+	destinations = deduplicate(destinations) // there are transient conditions during controller startup where it tries to add a service that is already added
 
 	return network.SecurityRule{
 		Name: existingRule.Name,
 		SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-			Priority:        existingRule.Priority,
-			Protocol:        existingRule.Protocol,
-			SourcePortRange: existingRule.SourcePortRange,
-			//SourcePortRanges:           existingRule.SourcePortRanges,
-			DestinationPortRange: existingRule.DestinationPortRange,
-			//DestinationPortRanges:      existingRule.DestinationPortRanges,
-			SourceAddressPrefix: existingRule.SourceAddressPrefix,
-			//SourceAddressPrefixes:      existingRule.SourceAddressPrefixes,
-			//DestinationAddressPrefixes: destinations,
-			//DestinationAddressPrefix: newRule.DestinationAddressPrefix,
+			Priority:                   existingRule.Priority,
+			Protocol:                   existingRule.Protocol,
+			SourcePortRange:            existingRule.SourcePortRange,
+			SourcePortRanges:           existingRule.SourcePortRanges,
+			DestinationPortRange:       existingRule.DestinationPortRange,
+			DestinationPortRanges:      existingRule.DestinationPortRanges,
+			SourceAddressPrefix:        existingRule.SourceAddressPrefix,
+			SourceAddressPrefixes:      existingRule.SourceAddressPrefixes,
+			DestinationAddressPrefixes: destinations,
 			Access:    existingRule.Access,
 			Direction: existingRule.Direction,
 		},
