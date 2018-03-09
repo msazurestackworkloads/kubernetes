@@ -19,10 +19,11 @@ package compute
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
-	"net/http"
 )
 
 // VirtualMachinesClient is the the Compute Management Client.
@@ -103,9 +104,8 @@ func (client VirtualMachinesClient) CapturePreparer(resourceGroupName string, VM
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -188,9 +188,8 @@ func (client VirtualMachinesClient) ConvertToManagedDisksPreparer(resourceGroupN
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -295,9 +294,8 @@ func (client VirtualMachinesClient) CreateOrUpdatePreparer(resourceGroupName str
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -380,9 +378,8 @@ func (client VirtualMachinesClient) DeallocatePreparer(resourceGroupName string,
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -462,9 +459,8 @@ func (client VirtualMachinesClient) DeletePreparer(resourceGroupName string, VMN
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -530,9 +526,8 @@ func (client VirtualMachinesClient) GeneralizePreparer(resourceGroupName string,
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -598,9 +593,8 @@ func (client VirtualMachinesClient) GetPreparer(resourceGroupName string, VMName
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 	if len(string(expand)) > 0 {
 		queryParameters["$expand"] = autorest.Encode("query", expand)
@@ -667,9 +661,8 @@ func (client VirtualMachinesClient) ListPreparer(resourceGroupName string) (*htt
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -754,9 +747,8 @@ func (client VirtualMachinesClient) ListAllPreparer() (*http.Request, error) {
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -845,9 +837,8 @@ func (client VirtualMachinesClient) ListAvailableSizesPreparer(resourceGroupName
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -926,9 +917,8 @@ func (client VirtualMachinesClient) PowerOffPreparer(resourceGroupName string, V
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -1008,9 +998,8 @@ func (client VirtualMachinesClient) RedeployPreparer(resourceGroupName string, V
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -1090,9 +1079,8 @@ func (client VirtualMachinesClient) RestartPreparer(resourceGroupName string, VM
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -1172,9 +1160,8 @@ func (client VirtualMachinesClient) StartPreparer(resourceGroupName string, VMNa
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(

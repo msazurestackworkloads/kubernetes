@@ -19,9 +19,10 @@ package network
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // VirtualNetworksClient is the composite Swagger for Network Client
@@ -77,9 +78,8 @@ func (client VirtualNetworksClient) CheckIPAddressAvailabilityPreparer(resourceG
 		"virtualNetworkName": autorest.Encode("path", virtualNetworkName),
 	}
 
-	const APIVersion = "2017-03-01"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 	if len(IPAddress) > 0 {
 		queryParameters["ipAddress"] = autorest.Encode("query", IPAddress)
@@ -161,9 +161,8 @@ func (client VirtualNetworksClient) CreateOrUpdatePreparer(resourceGroupName str
 		"virtualNetworkName": autorest.Encode("path", virtualNetworkName),
 	}
 
-	const APIVersion = "2017-03-01"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -245,9 +244,8 @@ func (client VirtualNetworksClient) DeletePreparer(resourceGroupName string, vir
 		"virtualNetworkName": autorest.Encode("path", virtualNetworkName),
 	}
 
-	const APIVersion = "2017-03-01"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -312,9 +310,8 @@ func (client VirtualNetworksClient) GetPreparer(resourceGroupName string, virtua
 		"virtualNetworkName": autorest.Encode("path", virtualNetworkName),
 	}
 
-	const APIVersion = "2017-03-01"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 	if len(expand) > 0 {
 		queryParameters["$expand"] = autorest.Encode("query", expand)
@@ -379,9 +376,8 @@ func (client VirtualNetworksClient) ListPreparer(resourceGroupName string) (*htt
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -464,9 +460,8 @@ func (client VirtualNetworksClient) ListAllPreparer() (*http.Request, error) {
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(

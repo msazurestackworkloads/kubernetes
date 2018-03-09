@@ -22,9 +22,10 @@ package network
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 const (
@@ -35,8 +36,10 @@ const (
 // ManagementClient is the base client for Network.
 type ManagementClient struct {
 	autorest.Client
-	BaseURI        string
-	SubscriptionID string
+	BaseURI            string
+	SubscriptionID     string
+	APIVersion         string
+	ScaleSetAPIVersion string
 }
 
 // New creates an instance of the ManagementClient client.
@@ -88,9 +91,8 @@ func (client ManagementClient) CheckDNSNameAvailabilityPreparer(location string,
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 	if len(domainNameLabel) > 0 {
 		queryParameters["domainNameLabel"] = autorest.Encode("query", domainNameLabel)

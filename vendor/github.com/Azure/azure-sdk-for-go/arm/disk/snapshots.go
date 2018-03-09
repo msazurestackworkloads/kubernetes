@@ -19,10 +19,11 @@ package disk
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
-	"net/http"
 )
 
 // SnapshotsClient is the the Disk Resource Provider Client.
@@ -114,9 +115,8 @@ func (client SnapshotsClient) CreateOrUpdatePreparer(resourceGroupName string, s
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -197,9 +197,8 @@ func (client SnapshotsClient) DeletePreparer(resourceGroupName string, snapshotN
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -265,9 +264,8 @@ func (client SnapshotsClient) GetPreparer(resourceGroupName string, snapshotName
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -356,9 +354,8 @@ func (client SnapshotsClient) GrantAccessPreparer(resourceGroupName string, snap
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -421,9 +418,8 @@ func (client SnapshotsClient) ListPreparer() (*http.Request, error) {
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -509,9 +505,8 @@ func (client SnapshotsClient) ListByResourceGroupPreparer(resourceGroupName stri
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -613,9 +608,8 @@ func (client SnapshotsClient) RevokeAccessPreparer(resourceGroupName string, sna
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -696,9 +690,8 @@ func (client SnapshotsClient) UpdatePreparer(resourceGroupName string, snapshotN
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(

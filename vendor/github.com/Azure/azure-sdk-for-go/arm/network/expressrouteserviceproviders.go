@@ -19,9 +19,10 @@ package network
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // ExpressRouteServiceProvidersClient is the composite Swagger for Network
@@ -71,9 +72,8 @@ func (client ExpressRouteServiceProvidersClient) ListPreparer() (*http.Request, 
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(

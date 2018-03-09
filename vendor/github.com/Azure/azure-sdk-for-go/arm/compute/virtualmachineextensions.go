@@ -19,9 +19,10 @@ package compute
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // VirtualMachineExtensionsClient is the the Compute Management Client.
@@ -93,9 +94,8 @@ func (client VirtualMachineExtensionsClient) CreateOrUpdatePreparer(resourceGrou
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -179,9 +179,8 @@ func (client VirtualMachineExtensionsClient) DeletePreparer(resourceGroupName st
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -250,9 +249,8 @@ func (client VirtualMachineExtensionsClient) GetPreparer(resourceGroupName strin
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2016-04-30-preview"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": client.APIVersion,
 	}
 	if len(expand) > 0 {
 		queryParameters["$expand"] = autorest.Encode("query", expand)
