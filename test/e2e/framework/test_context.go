@@ -99,6 +99,9 @@ type TestContextType struct {
 	// Whether configuration for accessing federation member clusters should be sourced from the host cluster
 	FederationConfigFromCluster bool
 
+	// Indicates what path the kubernetes-anywhere is installed on
+	KubernetesAnywherePath string
+
 	// Viper-only parameters.  These will in time replace all flags.
 
 	// Example: Create a file 'e2e.json' with the following:
@@ -138,12 +141,14 @@ type NodeTestContextType struct {
 
 type CloudConfig struct {
 	ProjectID         string
-	Zone              string
+	Zone              string // for multizone tests, arbitrarily chosen zone
+	Region            string
 	MultiZone         bool
 	Cluster           string
 	MasterName        string
 	NodeInstanceGroup string // comma-delimited list of groups' names
 	NumNodes          int
+	ClusterIPRange    string
 	ClusterTag        string
 	Network           string
 	ConfigFile        string // for azure and openstack
@@ -183,6 +188,7 @@ func RegisterCommonFlags() {
 	flag.StringVar(&TestContext.ContainerRuntime, "container-runtime", "docker", "The container runtime of cluster VM instances (docker/rkt/remote).")
 	flag.StringVar(&TestContext.ContainerRuntimeEndpoint, "container-runtime-endpoint", "", "The container runtime endpoint of cluster VM instances.")
 	flag.StringVar(&TestContext.ImageServiceEndpoint, "image-service-endpoint", "", "The image service endpoint of cluster VM instances.")
+	flag.StringVar(&TestContext.KubernetesAnywherePath, "kubernetes-anywhere-path", "/workspace/kubernetes-anywhere", "Which directory kubernetes-anywhere is installed to.")
 }
 
 // Register flags specific to the cluster e2e test suite.
@@ -209,12 +215,13 @@ func RegisterClusterFlags() {
 	flag.StringVar(&cloudConfig.MasterName, "kube-master", "", "Name of the kubernetes master. Only required if provider is gce or gke")
 	flag.StringVar(&cloudConfig.ProjectID, "gce-project", "", "The GCE project being used, if applicable")
 	flag.StringVar(&cloudConfig.Zone, "gce-zone", "", "GCE zone being used, if applicable")
+	flag.StringVar(&cloudConfig.Region, "gce-region", "", "GCE region being used, if applicable")
 	flag.BoolVar(&cloudConfig.MultiZone, "gce-multizone", false, "If true, start GCE cloud provider with multizone support.")
 	flag.StringVar(&cloudConfig.Cluster, "gke-cluster", "", "GKE name of cluster being used, if applicable")
 	flag.StringVar(&cloudConfig.NodeInstanceGroup, "node-instance-group", "", "Name of the managed instance group for nodes. Valid only for gce, gke or aws. If there is more than one group: comma separated list of groups.")
 	flag.StringVar(&cloudConfig.Network, "network", "e2e", "The cloud provider network for this e2e cluster.")
 	flag.IntVar(&cloudConfig.NumNodes, "num-nodes", -1, "Number of nodes in the cluster")
-
+	flag.StringVar(&cloudConfig.ClusterIPRange, "cluster-ip-range", "10.64.0.0/14", "A CIDR notation IP range from which to assign IPs in the cluster.")
 	flag.StringVar(&cloudConfig.ClusterTag, "cluster-tag", "", "Tag used to identify resources.  Only required if provider is aws.")
 	flag.StringVar(&cloudConfig.ConfigFile, "cloud-config-file", "", "Cloud config file.  Only required if provider is azure.")
 	flag.IntVar(&TestContext.MinStartupPods, "minStartupPods", 0, "The number of pods which we need to see in 'Running' state with a 'Ready' condition of true, before we try running tests. This is useful in any cluster which needs some base pod-based services running before it can be used.")

@@ -845,7 +845,7 @@ func (az *Cloud) reconcileSecurityGroup(sg network.SecurityGroup, clusterName st
 
 func findProbe(probes []network.Probe, probe network.Probe) bool {
 	for _, existingProbe := range probes {
-		if strings.EqualFold(*existingProbe.Name, *probe.Name) {
+		if strings.EqualFold(*existingProbe.Name, *probe.Name) && *existingProbe.Port == *probe.Port {
 			return true
 		}
 	}
@@ -892,7 +892,7 @@ func (az *Cloud) ensureHostInPool(serviceName string, nodeName types.NodeName, b
 	// Check availability set
 	if az.PrimaryAvailabilitySetName != "" {
 		expectedAvailabilitySetName := az.getAvailabilitySetID(az.PrimaryAvailabilitySetName)
-		if !strings.EqualFold(*machine.AvailabilitySet.ID, expectedAvailabilitySetName) {
+		if machine.AvailabilitySet == nil || !strings.EqualFold(*machine.AvailabilitySet.ID, expectedAvailabilitySetName) {
 			glog.V(3).Infof(
 				"nicupdate(%s): skipping nic (%s) since it is not in the primaryAvailabilitSet(%s)",
 				serviceName, nicName, az.PrimaryAvailabilitySetName)

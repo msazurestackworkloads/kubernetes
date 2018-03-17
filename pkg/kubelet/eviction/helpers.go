@@ -26,14 +26,14 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/kubernetes/pkg/api"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/kubernetes/pkg/api/v1"
 	v1qos "k8s.io/kubernetes/pkg/api/v1/helper/qos"
+	"k8s.io/kubernetes/pkg/features"
 	statsapi "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 	"k8s.io/kubernetes/pkg/kubelet/cm"
 	evictionapi "k8s.io/kubernetes/pkg/kubelet/eviction/api"
 	"k8s.io/kubernetes/pkg/kubelet/server/stats"
-	"k8s.io/kubernetes/pkg/quota/evaluator/core"
 )
 
 const (
@@ -581,24 +581,33 @@ func memory(stats statsFunc) cmpFunc {
 
 		// adjust p1, p2 usage relative to the request (if any)
 		p1Memory := p1Usage[v1.ResourceMemory]
-		p1Spec, err := core.PodUsageFunc(p1)
-		if err != nil {
-			return -1
-		}
-		p1Request := p1Spec[api.ResourceRequestsMemory]
+		p1Request := podMemoryRequest(p1)
 		p1Memory.Sub(p1Request)
 
 		p2Memory := p2Usage[v1.ResourceMemory]
-		p2Spec, err := core.PodUsageFunc(p2)
-		if err != nil {
-			return 1
-		}
-		p2Request := p2Spec[api.ResourceRequestsMemory]
+		p2Request := podMemoryRequest(p2)
 		p2Memory.Sub(p2Request)
 
 		// if p2 is using more than p1, we want p2 first
 		return p2Memory.Cmp(p1Memory)
 	}
+}
+
+// podMemoryRequest returns the total memory request of a pod which is the
+// max(sum of init container requests, sum of container requests)
+func podMemoryRequest(pod *v1.Pod) resource.Quantity {
+	containerValue := resource.Quantity{Format: resource.BinarySI}
+	for i := range pod.Spec.Containers {
+		containerValue.Add(*pod.Spec.Containers[i].Resources.Requests.Memory())
+	}
+	initValue := resource.Quantity{Format: resource.BinarySI}
+	for i := range pod.Spec.InitContainers {
+		initValue.Add(*pod.Spec.InitContainers[i].Resources.Requests.Memory())
+	}
+	if containerValue.Cmp(initValue) > 0 {
+		return containerValue
+	}
+	return initValue
 }
 
 // disk compares pods by largest consumer of disk relative to request for the specified disk resource.
@@ -727,33 +736,35 @@ func makeSignalObservations(summaryProvider stats.SummaryProvider, capacityProvi
 		}
 	}
 
-	storageScratchCapacity, storageScratchAllocatable, exist := getResourceAllocatable(nodeCapacity, allocatableReservation, v1.ResourceStorageScratch)
-	if exist {
-		for _, pod := range pods {
-			podStat, ok := statsFunc(pod)
-			if !ok {
-				continue
-			}
+	if utilfeature.DefaultFeatureGate.Enabled(features.LocalStorageCapacityIsolation) {
+		storageScratchCapacity, storageScratchAllocatable, exist := getResourceAllocatable(nodeCapacity, allocatableReservation, v1.ResourceStorageScratch)
+		if exist {
+			for _, pod := range pods {
+				podStat, ok := statsFunc(pod)
+				if !ok {
+					continue
+				}
 
-			usage, err := podDiskUsage(podStat, pod, []fsStatsType{fsStatsLogs, fsStatsLocalVolumeSource, fsStatsRoot})
-			if err != nil {
-				glog.Warningf("eviction manager: error getting pod disk usage %v", err)
-				continue
+				usage, err := podDiskUsage(podStat, pod, []fsStatsType{fsStatsLogs, fsStatsLocalVolumeSource, fsStatsRoot})
+				if err != nil {
+					glog.Warningf("eviction manager: error getting pod disk usage %v", err)
+					continue
+				}
+				// If there is a seperate imagefs set up for container runtimes, the scratch disk usage from nodefs should exclude the overlay usage
+				if withImageFs {
+					diskUsage := usage[resourceDisk]
+					diskUsageP := &diskUsage
+					diskUsagep := diskUsageP.Copy()
+					diskUsagep.Sub(usage[resourceOverlay])
+					storageScratchAllocatable.Sub(*diskUsagep)
+				} else {
+					storageScratchAllocatable.Sub(usage[resourceDisk])
+				}
 			}
-			// If there is a seperate imagefs set up for container runtimes, the scratch disk usage from nodefs should exclude the overlay usage
-			if withImageFs {
-				diskUsage := usage[resourceDisk]
-				diskUsageP := &diskUsage
-				diskUsagep := diskUsageP.Copy()
-				diskUsagep.Sub(usage[resourceOverlay])
-				storageScratchAllocatable.Sub(*diskUsagep)
-			} else {
-				storageScratchAllocatable.Sub(usage[resourceDisk])
+			result[evictionapi.SignalAllocatableNodeFsAvailable] = signalObservation{
+				available: storageScratchAllocatable,
+				capacity:  storageScratchCapacity,
 			}
-		}
-		result[evictionapi.SignalAllocatableNodeFsAvailable] = signalObservation{
-			available: storageScratchAllocatable,
-			capacity:  storageScratchCapacity,
 		}
 	}
 

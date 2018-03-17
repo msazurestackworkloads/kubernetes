@@ -38,9 +38,9 @@ var _ volume.ProvisionableVolumePlugin = &azureFilePlugin{}
 // azure cloud provider should implement it
 type azureCloudProvider interface {
 	// create a file share
-	CreateFileShare(name, storageAccount, storageType, location string, requestGB int) (string, string, error)
+	CreateFileShare(shareName, accountName, accountType, location string, requestGiB int) (string, string, error)
 	// delete a file share
-	DeleteFileShare(accountName, key, name string) error
+	DeleteFileShare(accountName, accountKey, shareName string) error
 }
 
 type azureFileDeleter struct {
@@ -138,7 +138,9 @@ func (a *azureFileProvisioner) Provision() (*v1.PersistentVolume, error) {
 
 	var sku, location, account string
 
-	name := volume.GenerateVolumeName(a.options.ClusterName, a.options.PVName, 75)
+	// File share name has a length limit of 63, and it cannot contain two consecutive '-'s.
+	name := volume.GenerateVolumeName(a.options.ClusterName, a.options.PVName, 63)
+	name = strings.Replace(name, "--", "-", -1)
 	capacity := a.options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
 	requestBytes := capacity.Value()
 	requestGB := int(volume.RoundUpSize(requestBytes, 1024*1024*1024))

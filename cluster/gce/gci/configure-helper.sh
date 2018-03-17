@@ -25,6 +25,12 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# Use --retry-connrefused opt only if it's supported by curl.
+CURL_RETRY_CONNREFUSED=""
+if curl --help | grep -q -- '--retry-connrefused'; then
+  CURL_RETRY_CONNREFUSED='--retry-connrefused'
+fi
+
 function setup-os-params {
   # Reset core_pattern. On GCI, the default core_pattern pipes the core dumps to
   # /sbin/crash_reporter which is more restrictive in saving crash dumps. So for
@@ -34,26 +40,45 @@ function setup-os-params {
 
 function config-ip-firewall {
   echo "Configuring IP firewall rules"
+
+  # Do not consider loopback addresses as martian source or destination while
+  # routing. This enables the use of 127/8 for local routing purposes.
+  sysctl -w net.ipv4.conf.all.route_localnet=1
+
   # The GCI image has host firewall which drop most inbound/forwarded packets.
   # We need to add rules to accept all TCP/UDP/ICMP packets.
-  if iptables -L INPUT | grep "Chain INPUT (policy DROP)" > /dev/null; then
+  if iptables -w -L INPUT | grep "Chain INPUT (policy DROP)" > /dev/null; then
     echo "Add rules to accept all inbound TCP/UDP/ICMP packets"
     iptables -A INPUT -w -p TCP -j ACCEPT
     iptables -A INPUT -w -p UDP -j ACCEPT
     iptables -A INPUT -w -p ICMP -j ACCEPT
   fi
-  if iptables -L FORWARD | grep "Chain FORWARD (policy DROP)" > /dev/null; then
+  if iptables -w -L FORWARD | grep "Chain FORWARD (policy DROP)" > /dev/null; then
     echo "Add rules to accept all forwarded TCP/UDP/ICMP packets"
     iptables -A FORWARD -w -p TCP -j ACCEPT
     iptables -A FORWARD -w -p UDP -j ACCEPT
     iptables -A FORWARD -w -p ICMP -j ACCEPT
   fi
 
-  iptables -N KUBE-METADATA-SERVER
-  iptables -I FORWARD -p tcp -d 169.254.169.254 --dport 80 -j KUBE-METADATA-SERVER
+  iptables -w -N KUBE-METADATA-SERVER
+  iptables -w -I FORWARD -p tcp -d 169.254.169.254 --dport 80 -j KUBE-METADATA-SERVER
 
   if [[ -n "${KUBE_FIREWALL_METADATA_SERVER:-}" ]]; then
-    iptables -A KUBE-METADATA-SERVER -j DROP
+    iptables -w -A KUBE-METADATA-SERVER -j DROP
+  fi
+
+  # Flush iptables nat table
+  iptables -w -t nat -F || true
+
+  echo "Add rules for ip masquerade"
+  if [[ "${NON_MASQUERADE_CIDR:-}" == "0.0.0.0/0" ]]; then
+    iptables -w -t nat -N IP-MASQ
+    iptables -w -t nat -A POSTROUTING -m comment --comment "ip-masq: ensure nat POSTROUTING directs all non-LOCAL destination traffic to our custom IP-MASQ chain" -m addrtype ! --dst-type LOCAL -j IP-MASQ
+    iptables -w -t nat -A IP-MASQ -d 169.254.0.0/16 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -w -t nat -A IP-MASQ -d 10.0.0.0/8 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -w -t nat -A IP-MASQ -d 172.16.0.0/12 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -w -t nat -A IP-MASQ -d 192.168.0.0/16 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -w -t nat -A IP-MASQ -m comment --comment "ip-masq: outbound traffic is subject to MASQUERADE (must be last in chain)" -j MASQUERADE
   fi
 }
 
@@ -740,6 +765,11 @@ function assemble-docker-flags {
   docker_opts+=" --log-opt=max-size=${DOCKER_LOG_MAX_SIZE:-10m}"
   docker_opts+=" --log-opt=max-file=${DOCKER_LOG_MAX_FILE:-5}"
 
+  # Disable live-restore if the environment variable is set.
+  if [[ "${DISABLE_DOCKER_LIVE_RESTORE:-false}" == "true" ]]; then
+    docker_opts+=" --live-restore=false"
+  fi
+
   echo "DOCKER_OPTS=\"${docker_opts} ${EXTRA_DOCKER_OPTS:-}\"" > /etc/default/docker
 
   if [[ "${use_net_plugin}" == "true" ]]; then
@@ -933,9 +963,6 @@ ExecStart=${kubelet_bin} \$KUBELET_OPTS
 WantedBy=multi-user.target
 EOF
 
-  # Flush iptables nat table
-  iptables -t nat -F || true
-
   systemctl start kubelet.service
 }
 
@@ -1029,7 +1056,7 @@ function start-kube-proxy {
 # $4: value for variable 'cpulimit'
 # $5: pod name, which should be either etcd or etcd-events
 function prepare-etcd-manifest {
-  local host_name=$(hostname)
+  local host_name=${ETCD_HOSTNAME:-$(hostname -s)}
   local etcd_cluster=""
   local cluster_state="new"
   local etcd_protocol="http"
@@ -1061,6 +1088,7 @@ function prepare-etcd-manifest {
   sed -i -e "s@{{ *hostname *}}@$host_name@g" "${temp_file}"
   sed -i -e "s@{{ *srv_kube_path *}}@/etc/srv/kubernetes@g" "${temp_file}"
   sed -i -e "s@{{ *etcd_cluster *}}@$etcd_cluster@g" "${temp_file}"
+  sed -i -e "s@{{ *liveness_probe_initial_delay *}}@${ETCD_LIVENESS_PROBE_INITIAL_DELAY_SEC:-15}@g" "${temp_file}"
   # Get default storage backend from manifest file.
   local -r default_storage_backend=$(cat "${temp_file}" | \
     grep -o "{{ *pillar\.get('storage_backend', '\(.*\)') *}}" | \
@@ -1321,7 +1349,7 @@ function start-kube-apiserver {
     params+=" --feature-gates=${FEATURE_GATES}"
   fi
   if [[ -n "${PROJECT_ID:-}" && -n "${TOKEN_URL:-}" && -n "${TOKEN_BODY:-}" && -n "${NODE_NETWORK:-}" ]]; then
-    local -r vm_external_ip=$(curl --retry 5 --retry-delay 3 --fail --silent -H 'Metadata-Flavor: Google' "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip")
+    local -r vm_external_ip=$(curl --retry 5 --retry-delay 3 ${CURL_RETRY_CONNREFUSED} --fail --silent -H 'Metadata-Flavor: Google' "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip")
     params+=" --advertise-address=${vm_external_ip}"
     params+=" --ssh-user=${PROXY_SSH_USER}"
     params+=" --ssh-keyfile=/etc/srv/sshproxy/.sshkeyfile"
@@ -1394,6 +1422,7 @@ function start-kube-apiserver {
   sed -i -e "s@{{pillar\['kube_docker_registry'\]}}@${DOCKER_REGISTRY}@g" "${src_file}"
   sed -i -e "s@{{pillar\['kube-apiserver_docker_tag'\]}}@${kube_apiserver_docker_tag}@g" "${src_file}"
   sed -i -e "s@{{pillar\['allow_privileged'\]}}@true@g" "${src_file}"
+  sed -i -e "s@{{liveness_probe_initial_delay}}@${KUBE_APISERVER_LIVENESS_PROBE_INITIAL_DELAY_SEC:-15}@g" "${src_file}"
   sed -i -e "s@{{secure_port}}@443@g" "${src_file}"
   sed -i -e "s@{{secure_port}}@8080@g" "${src_file}"
   sed -i -e "s@{{additional_cloud_config_mount}}@@g" "${src_file}"

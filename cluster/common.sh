@@ -802,6 +802,21 @@ EOF
 ETCD_VERSION: $(yaml-quote ${ETCD_VERSION})
 EOF
     fi
+    if [ -n "${ETCD_HOSTNAME:-}" ]; then
+      cat >>$file <<EOF
+ETCD_HOSTNAME: $(yaml-quote ${ETCD_HOSTNAME})
+EOF
+    fi
+    if [ -n "${ETCD_LIVENESS_PROBE_INITIAL_DELAY_SEC:-}" ]; then
+      cat >>$file <<EOF
+ETCD_LIVENESS_PROBE_INITIAL_DELAY_SEC: $(yaml-quote ${ETCD_LIVENESS_PROBE_INITIAL_DELAY_SEC})
+EOF
+    fi
+    if [ -n "${KUBE_APISERVER_LIVENESS_PROBE_INITIAL_DELAY_SEC:-}" ]; then
+      cat >>$file <<EOF
+KUBE_APISERVER_LIVENESS_PROBE_INITIAL_DELAY_SEC: $(yaml-quote ${KUBE_APISERVER_LIVENESS_PROBE_INITIAL_DELAY_SEC})
+EOF
+    fi
     if [ -n "${APISERVER_TEST_ARGS:-}" ]; then
       cat >>$file <<EOF
 APISERVER_TEST_ARGS: $(yaml-quote ${APISERVER_TEST_ARGS})
