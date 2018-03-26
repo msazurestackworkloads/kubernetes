@@ -218,58 +218,69 @@ func NewCloud(configReader io.Reader) (cloudprovider.Interface, error) {
 	}
 
 	az.SubnetsClient = network.NewSubnetsClient(az.SubscriptionID)
+	az.SubnetsClient.APIVersion = az.Environment.ArmNetworkAPIVersion
 	az.SubnetsClient.BaseURI = az.Environment.ResourceManagerEndpoint
 	az.SubnetsClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	az.SubnetsClient.PollingDelay = 5 * time.Second
 	configureUserAgent(&az.SubnetsClient.Client)
 
 	az.RouteTablesClient = network.NewRouteTablesClient(az.SubscriptionID)
+	az.RouteTablesClient.APIVersion = az.Environment.ArmNetworkAPIVersion
 	az.RouteTablesClient.BaseURI = az.Environment.ResourceManagerEndpoint
 	az.RouteTablesClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	az.RouteTablesClient.PollingDelay = 5 * time.Second
 	configureUserAgent(&az.RouteTablesClient.Client)
 
 	az.RoutesClient = network.NewRoutesClient(az.SubscriptionID)
+	az.RoutesClient.APIVersion = az.Environment.ArmNetworkAPIVersion
 	az.RoutesClient.BaseURI = az.Environment.ResourceManagerEndpoint
 	az.RoutesClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	az.RoutesClient.PollingDelay = 5 * time.Second
 	configureUserAgent(&az.RoutesClient.Client)
 
 	az.InterfacesClient = network.NewInterfacesClient(az.SubscriptionID)
+	az.InterfacesClient.APIVersion = az.Environment.ArmNetworkAPIVersion
+	az.InterfacesClient.ScaleSetAPIVersion = az.Environment.ArmNetworkScaleSetAPIVersion
 	az.InterfacesClient.BaseURI = az.Environment.ResourceManagerEndpoint
 	az.InterfacesClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	az.InterfacesClient.PollingDelay = 5 * time.Second
 	configureUserAgent(&az.InterfacesClient.Client)
 
 	az.LoadBalancerClient = network.NewLoadBalancersClient(az.SubscriptionID)
+	az.LoadBalancerClient.APIVersion = az.Environment.ArmNetworkAPIVersion
 	az.LoadBalancerClient.BaseURI = az.Environment.ResourceManagerEndpoint
 	az.LoadBalancerClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	az.LoadBalancerClient.PollingDelay = 5 * time.Second
 	configureUserAgent(&az.LoadBalancerClient.Client)
 
 	az.VirtualMachinesClient = compute.NewVirtualMachinesClient(az.SubscriptionID)
+	az.VirtualMachinesClient.APIVersion = az.Environment.ArmComputeAPIVersion
 	az.VirtualMachinesClient.BaseURI = az.Environment.ResourceManagerEndpoint
 	az.VirtualMachinesClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	az.VirtualMachinesClient.PollingDelay = 5 * time.Second
 	configureUserAgent(&az.VirtualMachinesClient.Client)
 
 	az.PublicIPAddressesClient = network.NewPublicIPAddressesClient(az.SubscriptionID)
+	az.PublicIPAddressesClient.APIVersion = az.Environment.ArmNetworkAPIVersion
 	az.PublicIPAddressesClient.BaseURI = az.Environment.ResourceManagerEndpoint
 	az.PublicIPAddressesClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	az.PublicIPAddressesClient.PollingDelay = 5 * time.Second
 	configureUserAgent(&az.PublicIPAddressesClient.Client)
 
 	az.SecurityGroupsClient = network.NewSecurityGroupsClient(az.SubscriptionID)
+	az.SecurityGroupsClient.APIVersion = az.Environment.ArmNetworkAPIVersion
 	az.SecurityGroupsClient.BaseURI = az.Environment.ResourceManagerEndpoint
 	az.SecurityGroupsClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	az.SecurityGroupsClient.PollingDelay = 5 * time.Second
 	configureUserAgent(&az.SecurityGroupsClient.Client)
 
 	az.StorageAccountClient = storage.NewAccountsClientWithBaseURI(az.Environment.ResourceManagerEndpoint, az.SubscriptionID)
+	az.StorageAccountClient.APIVersion = az.Environment.ArmStorageAPIVersion
 	az.StorageAccountClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	configureUserAgent(&az.StorageAccountClient.Client)
 
 	az.DisksClient = disk.NewDisksClientWithBaseURI(az.Environment.ResourceManagerEndpoint, az.SubscriptionID)
+	az.DisksClient.APIVersion = az.Environment.ArmDiskAPIVersion
 	az.DisksClient.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	configureUserAgent(&az.DisksClient.Client)
 

@@ -664,7 +664,7 @@ func (az *Cloud) reconcileLoadBalancer(lb network.LoadBalancer, fipConfiguration
 				},
 				LoadDistribution: loadDistribution,
 				FrontendPort:     to.Int32Ptr(port.Port),
-				BackendPort:      to.Int32Ptr(port.Port),
+				BackendPort:      to.Int32Ptr(port.NodePort),
 				EnableFloatingIP: to.BoolPtr(true),
 			},
 		}
@@ -803,7 +803,7 @@ func (az *Cloud) reconcileSecurityGroup(sg network.SecurityGroup, clusterName st
 				SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
 					Protocol:                 *securityProto,
 					SourcePortRange:          to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
+					DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.NodePort))),
 					SourceAddressPrefix:      to.StringPtr(sourceAddressPrefixes[j]),
 					DestinationAddressPrefix: to.StringPtr("*"),
 					Access:    network.SecurityRuleAccessAllow,
