@@ -665,7 +665,7 @@ func (az *Cloud) reconcileLoadBalancer(lb network.LoadBalancer, fipConfiguration
 				LoadDistribution: loadDistribution,
 				FrontendPort:     to.Int32Ptr(port.Port),
 				BackendPort:      to.Int32Ptr(port.NodePort),
-				EnableFloatingIP: to.BoolPtr(true),
+				EnableFloatingIP: to.BoolPtr(false),
 			},
 		}
 
