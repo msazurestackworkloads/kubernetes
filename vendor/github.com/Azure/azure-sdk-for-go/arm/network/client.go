@@ -21,15 +21,37 @@ package network
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"net/http"
+	"os"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 const (
 	// DefaultBaseURI is the default URI used for the service Network
 	DefaultBaseURI = "https://management.azure.com"
 )
+
+var (
+	// APIVersion is the API version for rest call
+	APIVersion = "2017-09-01"
+	// APIVersionScaleSet is the API version for rest call
+	APIVersionScaleSet = "2017-03-30"
+)
+
+// init will get the api version from environment variable, or use the default value.
+func init() {
+	APIVersionFromEnv := os.Getenv("APIVERSIONARMNETWORK")
+	if !(len(APIVersionFromEnv) > 0) {
+		APIVersion = APIVersionFromEnv
+	}
+
+	APIVersionScaleSetFromEnv := os.Getenv("APIVERSIONARMNETWORKSCALESET")
+	if !(len(APIVersionScaleSetFromEnv) > 0) {
+		APIVersionScaleSet = APIVersionScaleSetFromEnv
+	}
+}
 
 // ManagementClient is the base client for Network.
 type ManagementClient struct {
@@ -85,7 +107,6 @@ func (client ManagementClient) CheckDNSNameAvailabilityPreparer(location string,
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version":     APIVersion,
 		"domainNameLabel": autorest.Encode("query", domainNameLabel),

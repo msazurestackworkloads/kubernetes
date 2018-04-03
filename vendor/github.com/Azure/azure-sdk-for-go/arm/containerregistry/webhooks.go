@@ -18,10 +18,11 @@ package containerregistry
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
-	"net/http"
 )
 
 // WebhooksClient is the client for the Webhooks methods of the Containerregistry service.
@@ -111,7 +112,6 @@ func (client WebhooksClient) CreatePreparer(resourceGroupName string, registryNa
 		"webhookName":       autorest.Encode("path", webhookName),
 	}
 
-	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -211,7 +211,6 @@ func (client WebhooksClient) DeletePreparer(resourceGroupName string, registryNa
 		"webhookName":       autorest.Encode("path", webhookName),
 	}
 
-	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -291,7 +290,6 @@ func (client WebhooksClient) GetPreparer(resourceGroupName string, registryName 
 		"webhookName":       autorest.Encode("path", webhookName),
 	}
 
-	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -370,7 +368,6 @@ func (client WebhooksClient) GetCallbackConfigPreparer(resourceGroupName string,
 		"webhookName":       autorest.Encode("path", webhookName),
 	}
 
-	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -444,7 +441,6 @@ func (client WebhooksClient) ListPreparer(resourceGroupName string, registryName
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -592,7 +588,6 @@ func (client WebhooksClient) ListEventsPreparer(resourceGroupName string, regist
 		"webhookName":       autorest.Encode("path", webhookName),
 	}
 
-	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -740,7 +735,6 @@ func (client WebhooksClient) PingPreparer(resourceGroupName string, registryName
 		"webhookName":       autorest.Encode("path", webhookName),
 	}
 
-	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -838,7 +832,6 @@ func (client WebhooksClient) UpdatePreparer(resourceGroupName string, registryNa
 		"webhookName":       autorest.Encode("path", webhookName),
 	}
 
-	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

@@ -18,10 +18,11 @@ package compute
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
-	"net/http"
 )
 
 // ContainerServicesClient is the compute Client
@@ -124,9 +125,8 @@ func (client ContainerServicesClient) CreateOrUpdatePreparer(resourceGroupName s
 		"subscriptionId":       autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-01-31"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": APIVersionContainerService,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -211,9 +211,8 @@ func (client ContainerServicesClient) DeletePreparer(resourceGroupName string, c
 		"subscriptionId":       autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-01-31"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": APIVersionContainerService,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -280,9 +279,8 @@ func (client ContainerServicesClient) GetPreparer(resourceGroupName string, cont
 		"subscriptionId":       autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-01-31"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": APIVersionContainerService,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -342,9 +340,8 @@ func (client ContainerServicesClient) ListPreparer() (*http.Request, error) {
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-01-31"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": APIVersionContainerService,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -477,9 +474,8 @@ func (client ContainerServicesClient) ListByResourceGroupPreparer(resourceGroupN
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-01-31"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": APIVersionContainerService,
 	}
 
 	preparer := autorest.CreatePreparer(

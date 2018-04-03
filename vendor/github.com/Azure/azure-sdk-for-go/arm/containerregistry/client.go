@@ -21,6 +21,8 @@ package containerregistry
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"os"
+
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -28,6 +30,19 @@ const (
 	// DefaultBaseURI is the default URI used for the service Containerregistry
 	DefaultBaseURI = "https://management.azure.com"
 )
+
+var (
+	// APIVersion is the API version for rest call to CRP
+	APIVersion = "2017-10-01"
+)
+
+// init will get the api version from environment variable, or use the default value.
+func init() {
+	APIVersionFromEnv := os.Getenv("APIVERSIONARMCONTAINERREGISTRY")
+	if !(len(APIVersionFromEnv) > 0) {
+		APIVersion = APIVersionFromEnv
+	}
+}
 
 // ManagementClient is the base client for Containerregistry.
 type ManagementClient struct {
