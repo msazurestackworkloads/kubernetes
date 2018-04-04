@@ -146,7 +146,7 @@ func EnvironmentFromName(name string) (Environment, error) {
 	var toUpperName = strings.ToUpper(name)
 
 	if strings.EqualFold(toUpperName, "AZURESTACKCLOUD") {
-		return EnvironmentFromFile(path.Join("etc", "kubernetes", "azurestackcloud.json"), name)
+		return EnvironmentFromFile(path.Join("/", "etc", "kubernetes", "azurestackcloud.json"), name)
 	}
 
 	env, ok := environments[toUpperName]

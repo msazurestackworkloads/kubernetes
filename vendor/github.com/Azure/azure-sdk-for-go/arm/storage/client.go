@@ -39,7 +39,7 @@ var (
 // init will get the api version from environment variable, or use the default value.
 func init() {
 	APIVersionFromEnv := os.Getenv("APIVERSIONARMSTORAGE")
-	if !(len(APIVersionFromEnv) > 0) {
+	if len(APIVersionFromEnv) > 0 {
 		APIVersion = APIVersionFromEnv
 	}
 }
