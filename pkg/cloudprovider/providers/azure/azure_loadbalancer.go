@@ -827,9 +827,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 	if wantLb && lbIP == nil {
 		return nil, fmt.Errorf("No load balancer IP for setting up security rules for service %s", service.Name)
 	}
-	if lbIP != nil {
-		destinationIPAddress = *lbIP
-	}
+
 	if destinationIPAddress == "" {
 		destinationIPAddress = "*"
 	}
