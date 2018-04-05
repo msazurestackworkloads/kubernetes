@@ -42,12 +42,12 @@ var (
 
 // init will get the api version from environment variable, or use the default value.
 func init() {
-	APIVersionFromEnv := os.Getenv("APIVERSIONARMNETWORK")
+	APIVersionFromEnv := os.Getenv("APIVERSION_ARM_NETWORK")
 	if len(APIVersionFromEnv) > 0 {
 		APIVersion = APIVersionFromEnv
 	}
 
-	APIVersionScaleSetFromEnv := os.Getenv("APIVERSIONARMNETWORKSCALESET")
+	APIVersionScaleSetFromEnv := os.Getenv("APIVERSION_ARM_NETWORK_SCALESET")
 	if len(APIVersionScaleSetFromEnv) > 0 {
 		APIVersionScaleSet = APIVersionScaleSetFromEnv
 	}

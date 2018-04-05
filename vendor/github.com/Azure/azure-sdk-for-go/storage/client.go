@@ -83,7 +83,7 @@ var (
 )
 
 func init() {
-	APIVersionFromEnv := os.Getenv("APIVERSIONDISK")
+	APIVersionFromEnv := os.Getenv("APIVERSION_STORAGE")
 	if len(APIVersionFromEnv) > 0 {
 		DefaultAPIVersion = APIVersionFromEnv
 	}
