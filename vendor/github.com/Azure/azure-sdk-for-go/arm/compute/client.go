@@ -21,6 +21,8 @@ package compute
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"os"
+
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -28,6 +30,26 @@ const (
 	// DefaultBaseURI is the default URI used for the service Compute
 	DefaultBaseURI = "https://management.azure.com"
 )
+
+var (
+	// APIVersion is the API version for rest call to CRP
+	APIVersion = "2017-03-30"
+	// APIVersionContainerService is the API version for rest call to CRP container service
+	APIVersionContainerService = "2017-01-31"
+)
+
+// init will get the api version from environment variable, or use the default value.
+func init() {
+	APIVersionFromEnv := os.Getenv("APIVERSION_ARM_COMPUTE")
+	if len(APIVersionFromEnv) > 0 {
+		APIVersion = APIVersionFromEnv
+	}
+
+	APIVersionContainerServiceFromEnv := os.Getenv("APIVERSION_ARM_COMPUTE_CONTAINERSERVICE")
+	if len(APIVersionContainerServiceFromEnv) > 0 {
+		APIVersionContainerService = APIVersionContainerServiceFromEnv
+	}
+}
 
 // ManagementClient is the base client for Compute.
 type ManagementClient struct {

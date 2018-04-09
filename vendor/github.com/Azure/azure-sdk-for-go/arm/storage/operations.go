@@ -18,9 +18,10 @@ package storage
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // OperationsClient is the the Azure Storage Management API.
@@ -63,7 +64,6 @@ func (client OperationsClient) List() (result OperationListResult, err error) {
 
 // ListPreparer prepares the List request.
 func (client OperationsClient) ListPreparer() (*http.Request, error) {
-	const APIVersion = "2017-06-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

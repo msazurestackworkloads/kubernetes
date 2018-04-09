@@ -18,9 +18,10 @@ package network
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // VirtualNetworkPeeringsClient is the network Client
@@ -89,7 +90,6 @@ func (client VirtualNetworkPeeringsClient) CreateOrUpdatePreparer(resourceGroupN
 		"virtualNetworkPeeringName": autorest.Encode("path", virtualNetworkPeeringName),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -175,7 +175,6 @@ func (client VirtualNetworkPeeringsClient) DeletePreparer(resourceGroupName stri
 		"virtualNetworkPeeringName": autorest.Encode("path", virtualNetworkPeeringName),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -243,7 +242,6 @@ func (client VirtualNetworkPeeringsClient) GetPreparer(resourceGroupName string,
 		"virtualNetworkPeeringName": autorest.Encode("path", virtualNetworkPeeringName),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -308,7 +306,6 @@ func (client VirtualNetworkPeeringsClient) ListPreparer(resourceGroupName string
 		"virtualNetworkName": autorest.Encode("path", virtualNetworkName),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

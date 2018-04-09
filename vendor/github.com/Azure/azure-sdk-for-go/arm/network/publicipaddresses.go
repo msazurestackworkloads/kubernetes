@@ -18,10 +18,11 @@ package network
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
-	"net/http"
 )
 
 // PublicIPAddressesClient is the network Client
@@ -102,7 +103,6 @@ func (client PublicIPAddressesClient) CreateOrUpdatePreparer(resourceGroupName s
 		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -185,7 +185,6 @@ func (client PublicIPAddressesClient) DeletePreparer(resourceGroupName string, p
 		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -252,7 +251,6 @@ func (client PublicIPAddressesClient) GetPreparer(resourceGroupName string, publ
 		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -327,9 +325,8 @@ func (client PublicIPAddressesClient) GetVirtualMachineScaleSetPublicIPAddressPr
 		"virtualMachineScaleSetName": autorest.Encode("path", virtualMachineScaleSetName),
 	}
 
-	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": APIVersionScaleSet,
 	}
 	if len(expand) > 0 {
 		queryParameters["$expand"] = autorest.Encode("query", expand)
@@ -394,7 +391,6 @@ func (client PublicIPAddressesClient) ListPreparer(resourceGroupName string) (*h
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -524,7 +520,6 @@ func (client PublicIPAddressesClient) ListAllPreparer() (*http.Request, error) {
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -660,9 +655,8 @@ func (client PublicIPAddressesClient) ListVirtualMachineScaleSetPublicIPAddresse
 		"virtualMachineScaleSetName": autorest.Encode("path", virtualMachineScaleSetName),
 	}
 
-	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": APIVersionScaleSet,
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -800,9 +794,8 @@ func (client PublicIPAddressesClient) ListVirtualMachineScaleSetVMPublicIPAddres
 		"virtualMachineScaleSetName": autorest.Encode("path", virtualMachineScaleSetName),
 	}
 
-	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
+		"api-version": APIVersionScaleSet,
 	}
 
 	preparer := autorest.CreatePreparer(

@@ -23,6 +23,8 @@ package disk
 // regenerated.
 
 import (
+	"os"
+
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -30,6 +32,19 @@ const (
 	// DefaultBaseURI is the default URI used for the service Disk
 	DefaultBaseURI = "https://management.azure.com"
 )
+
+var (
+	// APIVersion is the API version for rest call
+	APIVersion = "2016-04-30-preview"
+)
+
+// init will get the api version from environment variable, or use the default value.
+func init() {
+	APIVersionFromEnv := os.Getenv("APIVERSION_ARM_DISK")
+	if len(APIVersionFromEnv) > 0 {
+		APIVersion = APIVersionFromEnv
+	}
+}
 
 // ManagementClient is the base client for Disk.
 type ManagementClient struct {

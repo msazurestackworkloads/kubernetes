@@ -18,9 +18,10 @@ package compute
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // VirtualMachineExtensionsClient is the compute Client
@@ -89,7 +90,6 @@ func (client VirtualMachineExtensionsClient) CreateOrUpdatePreparer(resourceGrou
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -174,7 +174,6 @@ func (client VirtualMachineExtensionsClient) DeletePreparer(resourceGroupName st
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -244,7 +243,6 @@ func (client VirtualMachineExtensionsClient) GetPreparer(resourceGroupName strin
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

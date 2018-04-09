@@ -29,6 +29,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"runtime"
 	"strings"
@@ -42,10 +43,6 @@ const (
 	// DefaultBaseURL is the domain name used for storage requests in the
 	// public cloud when a default client is created.
 	DefaultBaseURL = "core.windows.net"
-
-	// DefaultAPIVersion is the Azure Storage API version string used when a
-	// basic client is created.
-	DefaultAPIVersion = "2016-05-31"
 
 	defaultUseHTTPS      = true
 	defaultRetryAttempts = 5
@@ -72,6 +69,9 @@ const (
 )
 
 var (
+	// DefaultAPIVersion is the Azure Storage API version string used when a
+	// basic client is created.
+	DefaultAPIVersion       = "2016-05-31"
 	validStorageAccount     = regexp.MustCompile("^[0-9a-z]{3,24}$")
 	defaultValidStatusCodes = []int{
 		http.StatusRequestTimeout,      // 408
@@ -81,6 +81,13 @@ var (
 		http.StatusGatewayTimeout,      // 504
 	}
 )
+
+func init() {
+	APIVersionFromEnv := os.Getenv("APIVERSION_STORAGE")
+	if len(APIVersionFromEnv) > 0 {
+		DefaultAPIVersion = APIVersionFromEnv
+	}
+}
 
 // Sender sends a request
 type Sender interface {
