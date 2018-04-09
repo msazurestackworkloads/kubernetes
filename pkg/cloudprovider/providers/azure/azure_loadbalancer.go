@@ -638,8 +638,8 @@ func (az *Cloud) reconcileLoadBalancer(clusterName string, service *v1.Service, 
 				},
 				LoadDistribution: loadDistribution,
 				FrontendPort:     to.Int32Ptr(port.Port),
-				BackendPort:      to.Int32Ptr(port.Port),
-				EnableFloatingIP: to.BoolPtr(true),
+				BackendPort:      to.Int32Ptr(port.NodePort),
+				EnableFloatingIP: to.BoolPtr(false),
 			},
 		}
 
@@ -827,9 +827,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 	if wantLb && lbIP == nil {
 		return nil, fmt.Errorf("No load balancer IP for setting up security rules for service %s", service.Name)
 	}
-	if lbIP != nil {
-		destinationIPAddress = *lbIP
-	}
+
 	if destinationIPAddress == "" {
 		destinationIPAddress = "*"
 	}
@@ -866,7 +864,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 					SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
 						Protocol:                 *securityProto,
 						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
+						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.NodePort))),
 						SourceAddressPrefix:      to.StringPtr(sourceAddressPrefixes[j]),
 						DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
 						Access:    network.SecurityRuleAccessAllow,
