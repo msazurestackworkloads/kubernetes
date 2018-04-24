@@ -78,7 +78,7 @@ func (client UsagesClient) ListPreparer(location string) (*http.Request, error) 
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

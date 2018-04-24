@@ -91,7 +91,7 @@ func (client ApplicationGatewaysClient) BackendHealthPreparer(resourceGroupName 
 		"subscriptionId":         autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -192,7 +192,7 @@ func (client ApplicationGatewaysClient) CreateOrUpdatePreparer(resourceGroupName
 		"subscriptionId":         autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -276,7 +276,7 @@ func (client ApplicationGatewaysClient) DeletePreparer(resourceGroupName string,
 		"subscriptionId":         autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -343,7 +343,7 @@ func (client ApplicationGatewaysClient) GetPreparer(resourceGroupName string, ap
 		"subscriptionId":         autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -407,7 +407,7 @@ func (client ApplicationGatewaysClient) ListPreparer(resourceGroupName string) (
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -492,7 +492,7 @@ func (client ApplicationGatewaysClient) ListAllPreparer() (*http.Request, error)
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -578,7 +578,7 @@ func (client ApplicationGatewaysClient) ListAvailableWafRuleSetsPreparer() (*htt
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -658,7 +658,7 @@ func (client ApplicationGatewaysClient) StartPreparer(resourceGroupName string, 
 		"subscriptionId":         autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -739,7 +739,7 @@ func (client ApplicationGatewaysClient) StopPreparer(resourceGroupName string, a
 		"subscriptionId":         autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
