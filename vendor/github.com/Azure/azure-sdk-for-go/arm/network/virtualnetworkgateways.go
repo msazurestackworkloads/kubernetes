@@ -18,10 +18,11 @@ package network
 // Changes may cause incorrect behavior and will be lost if the code is regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
-	"net/http"
 )
 
 // VirtualNetworkGatewaysClient is the network Client
@@ -97,7 +98,7 @@ func (client VirtualNetworkGatewaysClient) CreateOrUpdatePreparer(resourceGroupN
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -182,7 +183,7 @@ func (client VirtualNetworkGatewaysClient) DeletePreparer(resourceGroupName stri
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -264,7 +265,7 @@ func (client VirtualNetworkGatewaysClient) GeneratevpnclientpackagePreparer(reso
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -350,7 +351,7 @@ func (client VirtualNetworkGatewaysClient) GenerateVpnProfilePreparer(resourceGr
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -420,7 +421,7 @@ func (client VirtualNetworkGatewaysClient) GetPreparer(resourceGroupName string,
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -501,7 +502,7 @@ func (client VirtualNetworkGatewaysClient) GetAdvertisedRoutesPreparer(resourceG
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 		"peer":        autorest.Encode("query", peer),
@@ -585,7 +586,7 @@ func (client VirtualNetworkGatewaysClient) GetBgpPeerStatusPreparer(resourceGrou
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -671,7 +672,7 @@ func (client VirtualNetworkGatewaysClient) GetLearnedRoutesPreparer(resourceGrou
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -755,7 +756,7 @@ func (client VirtualNetworkGatewaysClient) GetVpnProfilePackageURLPreparer(resou
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -821,7 +822,7 @@ func (client VirtualNetworkGatewaysClient) ListPreparer(resourceGroupName string
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -956,7 +957,7 @@ func (client VirtualNetworkGatewaysClient) ListConnectionsPreparer(resourceGroup
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1107,7 +1108,7 @@ func (client VirtualNetworkGatewaysClient) ResetPreparer(resourceGroupName strin
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1178,7 +1179,7 @@ func (client VirtualNetworkGatewaysClient) SupportedVpnDevicesPreparer(resourceG
 		"virtualNetworkGatewayName": autorest.Encode("path", virtualNetworkGatewayName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1245,7 +1246,7 @@ func (client VirtualNetworkGatewaysClient) VpnDeviceConfigurationScriptPreparer(
 		"virtualNetworkGatewayConnectionName": autorest.Encode("path", virtualNetworkGatewayConnectionName),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
