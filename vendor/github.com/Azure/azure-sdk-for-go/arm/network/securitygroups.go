@@ -19,9 +19,10 @@ package network
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // SecurityGroupsClient is the composite Swagger for Network Client
@@ -91,7 +92,7 @@ func (client SecurityGroupsClient) CreateOrUpdatePreparer(resourceGroupName stri
 		"subscriptionId":           autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -175,7 +176,7 @@ func (client SecurityGroupsClient) DeletePreparer(resourceGroupName string, netw
 		"subscriptionId":           autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -243,7 +244,7 @@ func (client SecurityGroupsClient) GetPreparer(resourceGroupName string, network
 		"subscriptionId":           autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -310,7 +311,7 @@ func (client SecurityGroupsClient) ListPreparer(resourceGroupName string) (*http
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -395,7 +396,7 @@ func (client SecurityGroupsClient) ListAllPreparer() (*http.Request, error) {
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

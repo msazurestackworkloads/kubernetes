@@ -19,9 +19,10 @@ package storage
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // UsageClient is the the Azure Storage Management API.
@@ -69,7 +70,7 @@ func (client UsageClient) ListPreparer() (*http.Request, error) {
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-12-01"
+	const APIVersion = "2016-01-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

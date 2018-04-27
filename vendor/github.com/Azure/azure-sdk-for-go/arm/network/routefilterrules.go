@@ -19,10 +19,11 @@ package network
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
-	"net/http"
 )
 
 // RouteFilterRulesClient is the composite Swagger for Network Client
@@ -105,7 +106,7 @@ func (client RouteFilterRulesClient) CreateOrUpdatePreparer(resourceGroupName st
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -190,7 +191,7 @@ func (client RouteFilterRulesClient) DeletePreparer(resourceGroupName string, ro
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -258,7 +259,7 @@ func (client RouteFilterRulesClient) GetPreparer(resourceGroupName string, route
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -324,7 +325,7 @@ func (client RouteFilterRulesClient) ListByRouteFilterPreparer(resourceGroupName
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -431,7 +432,7 @@ func (client RouteFilterRulesClient) UpdatePreparer(resourceGroupName string, ro
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

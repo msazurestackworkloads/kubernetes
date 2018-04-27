@@ -19,9 +19,10 @@ package network
 // regenerated.
 
 import (
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // ExpressRouteCircuitPeeringsClient is the composite Swagger for Network
@@ -93,7 +94,7 @@ func (client ExpressRouteCircuitPeeringsClient) CreateOrUpdatePreparer(resourceG
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -178,7 +179,7 @@ func (client ExpressRouteCircuitPeeringsClient) DeletePreparer(resourceGroupName
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -247,7 +248,7 @@ func (client ExpressRouteCircuitPeeringsClient) GetPreparer(resourceGroupName st
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -313,7 +314,7 @@ func (client ExpressRouteCircuitPeeringsClient) ListPreparer(resourceGroupName s
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-01"
+	const APIVersion = "2015-06-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

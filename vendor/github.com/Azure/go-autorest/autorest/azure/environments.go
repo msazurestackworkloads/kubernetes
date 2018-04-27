@@ -1,7 +1,24 @@
 package azure
 
+// Copyright 2017 Microsoft Corporation
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"path"
 	"strings"
 )
 
@@ -121,10 +138,42 @@ var (
 
 // EnvironmentFromName returns an Environment based on the common name specified
 func EnvironmentFromName(name string) (Environment, error) {
-	name = strings.ToUpper(name)
-	env, ok := environments[name]
+	// IMPORTANT
+	// As per @radhikagupta5:
+	// This is technical debt, fundamentally here because Kubernetes is not currently accepting
+	// contributions to the providers. Once that is an option, the provider should be updated to
+	// directly call `EnvironmentFromFile`. Until then, we rely on dispatching Azure Stack environment creation
+	var toUpperName = strings.ToUpper(name)
+
+	if strings.EqualFold(toUpperName, "AZURESTACKCLOUD") {
+		return EnvironmentFromFile(path.Join("etc", "kubernetes", "azurestackcloud.json"), name)
+	}
+
+	env, ok := environments[toUpperName]
 	if !ok {
 		return env, fmt.Errorf("autorest/azure: There is no cloud environment matching the name %q", name)
 	}
+
+	return env, nil
+}
+
+// EnvironmentFromFile loads an Environment from a configuration file available on disk.
+// This function is particularly useful in the Hybrid Cloud model, where one must define their own
+// endpoints.
+func EnvironmentFromFile(location string, name string) (Environment, error) {
+	env := Environment{
+		Name: name,
+	}
+
+	fileContents, err := ioutil.ReadFile(location)
+	if err != nil {
+		return env, fmt.Errorf("autorest/azure: Error in opening the env. jason file %q", err.Error())
+	}
+
+	err = json.Unmarshal(fileContents, &env)
+	if err != nil {
+		return env, fmt.Errorf("autorest/azure: Error parsing the env. jason file %q", err.Error())
+	}
+
 	return env, nil
 }
