@@ -74,7 +74,7 @@ func (client VirtualMachineExtensionImagesClient) GetPreparer(location string, p
 		"version":        autorest.Encode("path", version),
 	}
 
-	const APIVersion = "2017-03-30"
+	const APIVersion = "2016-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -141,7 +141,7 @@ func (client VirtualMachineExtensionImagesClient) ListTypesPreparer(location str
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-03-30"
+	const APIVersion = "2016-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -209,7 +209,7 @@ func (client VirtualMachineExtensionImagesClient) ListVersionsPreparer(location 
 		"type":           autorest.Encode("path", typeParameter),
 	}
 
-	const APIVersion = "2017-03-30"
+	const APIVersion = "2016-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

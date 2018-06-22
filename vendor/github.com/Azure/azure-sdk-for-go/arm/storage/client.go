@@ -1,8 +1,8 @@
-// Package storage implements the Azure ARM Storage service API version 2017-06-01.
+// Package storage implements the Azure ARM Storage service API version 2016-01-01.
 //
 // The Azure Storage Management API.
 //
-// Deprecated: Please instead use github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2017-06-01/storage
+// Deprecated: Please instead use github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2016-01-01/storage
 package storage
 
 // Copyright (c) Microsoft and contributors.  All rights reserved.
