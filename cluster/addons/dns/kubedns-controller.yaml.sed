@@ -55,7 +55,7 @@ spec:
           optional: true
       containers:
       - name: kubedns
-        image: gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.5
+        image: k8s.gcr.io/k8s-dns-kube-dns-amd64:1.14.10
         resources:
           # TODO: Set memory limits when we've profiled the container for large
           # clusters, then set request = limit to keep this container in
@@ -106,7 +106,7 @@ spec:
         - name: kube-dns-config
           mountPath: /kube-dns-config
       - name: dnsmasq
-        image: gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.5
+        image: k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64:1.14.10
         livenessProbe:
           httpGet:
             path: /healthcheck/dnsmasq
@@ -124,6 +124,7 @@ spec:
         - --
         - -k
         - --cache-size=1000
+        - --no-negcache
         - --log-facility=-
         - --server=/$DNS_DOMAIN/127.0.0.1#10053
         - --server=/in-addr.arpa/127.0.0.1#10053
@@ -144,7 +145,7 @@ spec:
         - name: kube-dns-config
           mountPath: /etc/k8s/dns/dnsmasq-nanny
       - name: sidecar
-        image: gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.5
+        image: k8s.gcr.io/k8s-dns-sidecar-amd64:1.14.10
         livenessProbe:
           httpGet:
             path: /metrics

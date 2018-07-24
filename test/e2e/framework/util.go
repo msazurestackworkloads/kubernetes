@@ -87,6 +87,7 @@ import (
 	"k8s.io/kubernetes/pkg/controller"
 	nodectlr "k8s.io/kubernetes/pkg/controller/node"
 	"k8s.io/kubernetes/pkg/kubectl"
+	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
 	"k8s.io/kubernetes/pkg/kubelet/util/format"
 	"k8s.io/kubernetes/pkg/master/ports"
 	sshutil "k8s.io/kubernetes/pkg/ssh"
@@ -343,6 +344,16 @@ func SkipUnlessSSHKeyPresent() {
 func SkipUnlessProviderIs(supportedProviders ...string) {
 	if !ProviderIs(supportedProviders...) {
 		Skipf("Only supported for providers %v (not %s)", supportedProviders, TestContext.Provider)
+	}
+}
+
+func SkipIfMultizone(c clientset.Interface) {
+	zones, err := GetClusterZones(c)
+	if err != nil {
+		Skipf("Error listing cluster zones")
+	}
+	if zones.Len() > 1 {
+		Skipf("Requires more than one zone")
 	}
 }
 
@@ -2391,8 +2402,8 @@ func getNodeEvents(c clientset.Interface, nodeName string) []v1.Event {
 	return events.Items
 }
 
-// waitListSchedulableNodesOrDie is a wrapper around listing nodes supporting retries.
-func waitListSchedulableNodesOrDie(c clientset.Interface) *v1.NodeList {
+// waitListSchedulableNodes is a wrapper around listing nodes supporting retries.
+func waitListSchedulableNodes(c clientset.Interface) (*v1.NodeList, error) {
 	var nodes *v1.NodeList
 	var err error
 	if wait.PollImmediate(Poll, SingleCallTimeout, func() (bool, error) {
@@ -2407,6 +2418,15 @@ func waitListSchedulableNodesOrDie(c clientset.Interface) *v1.NodeList {
 		}
 		return true, nil
 	}) != nil {
+		return nodes, err
+	}
+	return nodes, nil
+}
+
+// waitListSchedulableNodesOrDie is a wrapper around listing nodes supporting retries.
+func waitListSchedulableNodesOrDie(c clientset.Interface) *v1.NodeList {
+	nodes, err := waitListSchedulableNodes(c)
+	if err != nil {
 		ExpectNoError(err, "Non-retryable failure or timed out while listing nodes for e2e cluster.")
 	}
 	return nodes
@@ -2729,9 +2749,12 @@ func WaitForControlledPodsRunning(c clientset.Interface, ns, name string, kind s
 
 // Returns true if all the specified pods are scheduled, else returns false.
 func podsWithLabelScheduled(c clientset.Interface, ns string, label labels.Selector) (bool, error) {
-	PodStore := testutil.NewPodStore(c, ns, label, fields.Everything())
-	defer PodStore.Stop()
-	pods := PodStore.List()
+	ps, err := testutil.NewPodStore(c, ns, label, fields.Everything())
+	if err != nil {
+		return false, err
+	}
+	defer ps.Stop()
+	pods := ps.List()
 	if len(pods) == 0 {
 		return false, nil
 	}
@@ -2917,7 +2940,7 @@ func DeleteResourceAndPods(clientset clientset.Interface, internalClientset inte
 		return err
 	}
 
-	ps, err := podStoreForSelector(clientset, ns, selector)
+	ps, err := testutil.NewPodStore(clientset, ns, selector, fields.Everything())
 	if err != nil {
 		return err
 	}
@@ -2971,7 +2994,7 @@ func DeleteResourceAndWaitForGC(c clientset.Interface, kind schema.GroupKind, ns
 		return err
 	}
 
-	ps, err := podStoreForSelector(c, ns, selector)
+	ps, err := testutil.NewPodStore(c, ns, selector, fields.Everything())
 	if err != nil {
 		return err
 	}
@@ -3020,19 +3043,6 @@ func DeleteResourceAndWaitForGC(c clientset.Interface, kind schema.GroupKind, ns
 		return fmt.Errorf("error while waiting for pods gone %s: %v", name, err)
 	}
 	return nil
-}
-
-// podStoreForSelector creates a PodStore that monitors pods from given namespace matching given selector.
-// It waits until the reflector does a List() before returning.
-func podStoreForSelector(c clientset.Interface, ns string, selector labels.Selector) (*testutil.PodStore, error) {
-	ps := testutil.NewPodStore(c, ns, selector, fields.Everything())
-	err := wait.Poll(100*time.Millisecond, 2*time.Minute, func() (bool, error) {
-		if len(ps.Reflector.LastSyncResourceVersion()) != 0 {
-			return true, nil
-		}
-		return false, nil
-	})
-	return ps, err
 }
 
 // waitForPodsInactive waits until there are no active pods left in the PodStore.
@@ -3919,11 +3929,19 @@ func WaitForControllerManagerUp() error {
 	return fmt.Errorf("waiting for controller-manager timed out")
 }
 
-// Returns number of ready Nodes excluding Master Node.
+// NumberOfRegisteredNodes returns number of registered Nodes excluding Master Node.
+func NumberOfRegisteredNodes(c clientset.Interface) (int, error) {
+	nodes, err := waitListSchedulableNodes(c)
+	if err != nil {
+		Logf("Failed to list nodes: %v", err)
+		return 0, err
+	}
+	return len(nodes.Items), nil
+}
+
+// NumberOfReadyNodes returns number of ready Nodes excluding Master Node.
 func NumberOfReadyNodes(c clientset.Interface) (int, error) {
-	nodes, err := c.Core().Nodes().List(metav1.ListOptions{FieldSelector: fields.Set{
-		"spec.unschedulable": "false",
-	}.AsSelector().String()})
+	nodes, err := waitListSchedulableNodes(c)
 	if err != nil {
 		Logf("Failed to list nodes: %v", err)
 		return 0, err
@@ -3936,13 +3954,12 @@ func NumberOfReadyNodes(c clientset.Interface) (int, error) {
 	return len(nodes.Items), nil
 }
 
-// WaitForReadyNodes waits until the cluster has desired size and there is no not-ready nodes in it.
-// By cluster size we mean number of Nodes excluding Master Node.
-func WaitForReadyNodes(c clientset.Interface, size int, timeout time.Duration) error {
+// CheckNodesReady waits up to timeout for cluster to has desired size and
+// there is no not-ready nodes in it. By cluster size we mean number of Nodes
+// excluding Master Node.
+func CheckNodesReady(c clientset.Interface, size int, timeout time.Duration) ([]v1.Node, error) {
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(20 * time.Second) {
-		nodes, err := c.Core().Nodes().List(metav1.ListOptions{FieldSelector: fields.Set{
-			"spec.unschedulable": "false",
-		}.AsSelector().String()})
+		nodes, err := waitListSchedulableNodes(c)
 		if err != nil {
 			Logf("Failed to list nodes: %v", err)
 			continue
@@ -3957,11 +3974,19 @@ func WaitForReadyNodes(c clientset.Interface, size int, timeout time.Duration) e
 
 		if numNodes == size && numReady == size {
 			Logf("Cluster has reached the desired number of ready nodes %d", size)
-			return nil
+			return nodes.Items, nil
 		}
 		Logf("Waiting for ready nodes %d, current ready %d, not ready nodes %d", size, numNodes, numNodes-numReady)
 	}
-	return fmt.Errorf("timeout waiting %v for number of ready nodes to be %d", timeout, size)
+	return nil, fmt.Errorf("timeout waiting %v for number of ready nodes to be %d", timeout, size)
+}
+
+// WaitForReadyNodes waits up to timeout for cluster to has desired size and
+// there is no not-ready nodes in it. By cluster size we mean number of Nodes
+// excluding Master Node.
+func WaitForReadyNodes(c clientset.Interface, size int, timeout time.Duration) error {
+	_, err := CheckNodesReady(c, size, timeout)
+	return err
 }
 
 func GenerateMasterRegexp(prefix string) string {
@@ -4768,14 +4793,17 @@ func (p *E2ETestNodePreparer) CleanupNodes() error {
 // CleanupGCEResources cleans up GCE Service Type=LoadBalancer resources with
 // the given name. The name is usually the UUID of the Service prefixed with an
 // alpha-numeric character ('a') to work around cloudprovider rules.
-func CleanupGCEResources(c clientset.Interface, loadBalancerName, zone string) (retErr error) {
+func CleanupGCEResources(c clientset.Interface, loadBalancerName, region, zone string) (retErr error) {
 	gceCloud, err := GetGCECloud()
 	if err != nil {
 		return err
 	}
-	region, err := gcecloud.GetGCERegion(zone)
-	if err != nil {
-		return fmt.Errorf("error parsing GCE/GKE region from zone %q: %v", zone, err)
+	if region == "" {
+		// Attempt to parse region from zone if no region is given.
+		region, err = gcecloud.GetGCERegion(zone)
+		if err != nil {
+			return fmt.Errorf("error parsing GCE/GKE region from zone %q: %v", zone, err)
+		}
 	}
 	if err := gceCloud.DeleteFirewall(loadBalancerName); err != nil &&
 		!IsGoogleAPIHTTPErrorCode(err, http.StatusNotFound) {
@@ -5057,4 +5085,20 @@ func DsFromManifest(url string) (*extensions.DaemonSet, error) {
 		return nil, fmt.Errorf("failed to decode DaemonSet spec: %v", err)
 	}
 	return &controller, nil
+}
+
+func GetClusterZones(c clientset.Interface) (sets.String, error) {
+	nodes, err := c.CoreV1().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("Error getting nodes while attempting to list cluster zones: %v", err)
+	}
+
+	// collect values of zone label from all nodes
+	zones := sets.NewString()
+	for _, node := range nodes.Items {
+		if zone, found := node.Labels[kubeletapis.LabelZoneFailureDomain]; found {
+			zones.Insert(zone)
+		}
+	}
+	return zones, nil
 }

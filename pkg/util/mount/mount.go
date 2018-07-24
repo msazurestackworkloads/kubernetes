@@ -262,7 +262,13 @@ func IsNotMountPoint(mounter Interface, file string) (bool, error) {
 // The list equals:
 //   options - 'bind' + 'remount' (no duplicate)
 func isBind(options []string) (bool, []string) {
-	bindRemountOpts := []string{"remount"}
+	// Because we have an FD opened on the subpath bind mount, the "bind" option
+	// needs to be included, otherwise the mount target will error as busy if you
+	// remount as readonly.
+	//
+	// As a consequence, all read only bind mounts will no longer change the underlying
+	// volume mount to be read only.
+	bindRemountOpts := []string{"bind", "remount"}
 	bind := false
 
 	if len(options) != 0 {
@@ -288,9 +294,15 @@ func pathWithinBase(fullPath, basePath string) bool {
 	if err != nil {
 		return false
 	}
-	if strings.HasPrefix(rel, "..") {
+	if startsWithBackstep(rel) {
 		// Needed to escape the base path
 		return false
 	}
 	return true
+}
+
+// startsWithBackstep checks if the given path starts with a backstep segment
+func startsWithBackstep(rel string) bool {
+	// normalize to / and check for ../
+	return rel == ".." || strings.HasPrefix(filepath.ToSlash(rel), "../")
 }

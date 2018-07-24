@@ -43,6 +43,7 @@ PREEMPTIBLE_NODE=${PREEMPTIBLE_NODE:-false}
 PREEMPTIBLE_MASTER=${PREEMPTIBLE_MASTER:-false}
 KUBE_DELETE_NODES=${KUBE_DELETE_NODES:-true}
 KUBE_DELETE_NETWORK=${KUBE_DELETE_NETWORK:-true}
+CREATE_CUSTOM_NETWORK=${CREATE_CUSTOM_NETWORK:-false}
 
 MASTER_OS_DISTRIBUTION=${KUBE_MASTER_OS_DISTRIBUTION:-${KUBE_OS_DISTRIBUTION:-gci}}
 NODE_OS_DISTRIBUTION=${KUBE_NODE_OS_DISTRIBUTION:-${KUBE_OS_DISTRIBUTION:-gci}}
@@ -83,6 +84,9 @@ RKT_VERSION=${KUBE_RKT_VERSION:-1.23.0}
 RKT_STAGE1_IMAGE=${KUBE_RKT_STAGE1_IMAGE:-coreos.com/rkt/stage1-coreos}
 
 NETWORK=${KUBE_GCE_NETWORK:-e2e-test-${USER}}
+if [[ "${CREATE_CUSTOM_NETWORK}" == true ]]; then
+  SUBNETWORK="${SUBNETWORK:-${NETWORK}-custom-subnet}"
+fi
 INSTANCE_PREFIX="${KUBE_GCE_INSTANCE_PREFIX:-e2e-test-${USER}}"
 CLUSTER_NAME="${CLUSTER_NAME:-${INSTANCE_PREFIX}}"
 MASTER_NAME="${INSTANCE_PREFIX}-master"
@@ -94,8 +98,8 @@ NODE_TAG="${INSTANCE_PREFIX}-minion"
 
 CLUSTER_IP_RANGE="${CLUSTER_IP_RANGE:-$(get-cluster-ip-range)}"
 MASTER_IP_RANGE="${MASTER_IP_RANGE:-10.246.0.0/24}"
-# NODE_IP_RANGE is used when ENABLE_IP_ALIASES=true. It is the primary range in
-# the subnet and is the range used for node instance IPs.
+# NODE_IP_RANGE is used when ENABLE_IP_ALIASES=true or CREATE_CUSTOM_NETWORK=true.
+# It is the primary range in the subnet and is the range used for node instance IPs.
 NODE_IP_RANGE="$(get-node-ip-range)"
 
 RUNTIME_CONFIG="${KUBE_RUNTIME_CONFIG:-}"
@@ -174,8 +178,8 @@ TEST_CLUSTER_RESYNC_PERIOD="${TEST_CLUSTER_RESYNC_PERIOD:---min-resync-period=3m
 # ContentType used by all components to communicate with apiserver.
 TEST_CLUSTER_API_CONTENT_TYPE="${TEST_CLUSTER_API_CONTENT_TYPE:-}"
 
-KUBELET_TEST_ARGS="${KUBELET_TEST_ARGS:-} --max-pods=110 --serialize-image-pulls=false ${TEST_CLUSTER_API_CONTENT_TYPE} ${KUBELET_TEST_VOLUME_PLUGIN_DIR:-}"
-if [[ "${NODE_OS_DISTRIBUTION}" == "gci" ]] || [[ "${NODE_OS_DISTRIBUTION}" == "ubuntu" ]]; then
+KUBELET_TEST_ARGS="${KUBELET_TEST_ARGS:-} --serialize-image-pulls=false ${TEST_CLUSTER_API_CONTENT_TYPE} ${KUBELET_TEST_VOLUME_PLUGIN_DIR:-}"
+if [[ "${NODE_OS_DISTRIBUTION}" == "gci" ]] || [[ "${NODE_OS_DISTRIBUTION}" == "ubuntu" ]] || [[ "${NODE_OS_DISTRIBUTION}" == "custom" ]]; then
   NODE_KUBELET_TEST_ARGS=" --experimental-kernel-memcg-notification=true"
 fi
 if [[ "${MASTER_OS_DISTRIBUTION}" == "gci" ]] || [[ "${MASTER_OS_DISTRIBUTION}" == "ubuntu" ]]; then
@@ -268,16 +272,27 @@ ENABLE_RESCHEDULER="${KUBE_ENABLE_RESCHEDULER:-true}"
 #   new subnetwork will be created for the cluster.
 ENABLE_IP_ALIASES=${KUBE_GCE_ENABLE_IP_ALIASES:-false}
 if [ ${ENABLE_IP_ALIASES} = true ]; then
-  # Size of ranges allocated to each node. gcloud current supports only /32 and /24.
-  IP_ALIAS_SIZE=${KUBE_GCE_IP_ALIAS_SIZE:-/24}
+  # Number of Pods that can run on this node.
+  MAX_PODS_PER_NODE=${MAX_PODS_PER_NODE:-110}
+  # Size of ranges allocated to each node.
+  IP_ALIAS_SIZE="/$(get-alias-range-size ${MAX_PODS_PER_NODE})"
   IP_ALIAS_SUBNETWORK=${KUBE_GCE_IP_ALIAS_SUBNETWORK:-${INSTANCE_PREFIX}-subnet-default}
+  # If we're using custom network, use the subnet we already create for it as the one for ip-alias.
+  # Note that this means SUBNETWORK would override KUBE_GCE_IP_ALIAS_SUBNETWORK in case of custom network.
+  if [[ "${CREATE_CUSTOM_NETWORK}" == true ]]; then
+    IP_ALIAS_SUBNETWORK="${SUBNETWORK}"
+  fi
   # Reserve the services IP space to avoid being allocated for other GCP resources.
   SERVICE_CLUSTER_IP_SUBNETWORK=${KUBE_GCE_SERVICE_CLUSTER_IP_SUBNETWORK:-${INSTANCE_PREFIX}-subnet-services}
-  # NODE_IP_RANGE is used when ENABLE_IP_ALIASES=true. It is the primary range in
-  # the subnet and is the range used for node instance IPs.
-  NODE_IP_RANGE="${NODE_IP_RANGE:-10.40.0.0/22}"
   # Add to the provider custom variables.
   PROVIDER_VARS="${PROVIDER_VARS:-} ENABLE_IP_ALIASES"
+else
+  if [[ -n "${MAX_PODS_PER_NODE:-}" ]]; then
+    # Should not have MAX_PODS_PER_NODE set for route-based clusters.
+    echo -e "${color_red}Cannot set MAX_PODS_PER_NODE for route-based projects for ${PROJECT}." >&2
+    exit 1
+  fi
+  KUBELET_TEST_ARGS="${KUBELET_TEST_ARGS:-} --max-pods=110"
 fi
 
 # Enable GCE Alpha features.

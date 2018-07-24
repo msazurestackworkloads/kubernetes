@@ -91,7 +91,7 @@ func (c *BlobDiskController) CreateVolume(name, storageAccount, storageAccountTy
 		accounts = append(accounts, accountWithLocation{Name: storageAccount})
 	} else {
 		// find a storage account
-		accounts, err = c.common.cloud.getStorageAccounts()
+		accounts, err = c.common.cloud.getStorageAccounts(storageAccountType, location)
 		if err != nil {
 			// TODO: create a storage account and container
 			return "", "", 0, err
@@ -469,7 +469,7 @@ func (c *BlobDiskController) getDiskCount(SAName string) (int, error) {
 }
 
 func (c *BlobDiskController) getAllStorageAccounts() (map[string]*storageAccountState, error) {
-	accountListResult, err := c.common.cloud.StorageAccountClient.List()
+	accountListResult, err := c.common.cloud.StorageAccountClient.ListByResourceGroup(c.common.resourceGroup)
 	if err != nil {
 		return nil, err
 	}
