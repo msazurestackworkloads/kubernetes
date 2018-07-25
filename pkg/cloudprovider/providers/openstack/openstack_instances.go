@@ -40,6 +40,7 @@ func (os *OpenStack) Instances() (cloudprovider.Instances, bool) {
 
 	compute, err := os.NewComputeV2()
 	if err != nil {
+		glog.Errorf("unable to access compute v2 API : %v", err)
 		return nil, false
 	}
 
@@ -103,7 +104,7 @@ func (i *Instances) NodeAddressesByProviderID(providerID string) ([]v1.NodeAddre
 
 // ExternalID returns the cloud provider ID of the specified instance (deprecated).
 func (i *Instances) ExternalID(name types.NodeName) (string, error) {
-	srv, err := getServerByName(i.compute, name)
+	srv, err := getServerByName(i.compute, name, true)
 	if err != nil {
 		if err == ErrNotFound {
 			return "", cloudprovider.InstanceNotFound
@@ -151,7 +152,7 @@ func (os *OpenStack) InstanceID() (string, error) {
 
 // InstanceID returns the cloud provider ID of the specified instance.
 func (i *Instances) InstanceID(name types.NodeName) (string, error) {
-	srv, err := getServerByName(i.compute, name)
+	srv, err := getServerByName(i.compute, name, true)
 	if err != nil {
 		if err == ErrNotFound {
 			return "", cloudprovider.InstanceNotFound
@@ -184,7 +185,7 @@ func (i *Instances) InstanceTypeByProviderID(providerID string) (string, error) 
 
 // InstanceType returns the type of the specified instance.
 func (i *Instances) InstanceType(name types.NodeName) (string, error) {
-	srv, err := getServerByName(i.compute, name)
+	srv, err := getServerByName(i.compute, name, true)
 
 	if err != nil {
 		return "", err
