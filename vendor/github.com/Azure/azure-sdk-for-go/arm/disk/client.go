@@ -1,9 +1,9 @@
 // Package disk implements the Azure ARM Disk service API version
-// 2016-04-30-preview.
+// 2017-03-30.
 //
 // The Disk Resource Provider Client.
 //
-// Deprecated: Please instead use github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2016-04-30-preview/compute
+// Deprecated: Please instead use github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-03-30/compute
 package disk
 
 // Copyright (c) Microsoft and contributors.  All rights reserved.
