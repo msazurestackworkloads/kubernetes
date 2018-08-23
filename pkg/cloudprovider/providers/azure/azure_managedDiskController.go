@@ -60,7 +60,8 @@ func (c *ManagedDiskController) CreateManagedDisk(diskName string, storageAccoun
 		Location: &c.common.location,
 		Tags:     &newTags,
 		Properties: &disk.Properties{
-			AccountType:  disk.StorageAccountTypes(storageAccountType),
+			// Azure stack did not support account type parameter.
+			// AccountType:  disk.StorageAccountTypes(storageAccountType),
 			DiskSizeGB:   &diskSizeGB,
 			CreationData: &disk.CreationData{CreateOption: disk.Empty},
 		}}
