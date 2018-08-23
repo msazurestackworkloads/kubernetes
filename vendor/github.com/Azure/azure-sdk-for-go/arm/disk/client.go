@@ -1,5 +1,5 @@
 // Package disk implements the Azure ARM Disk service API version
-// 2016-04-30-preview.
+// 2017-03-30.
 //
 // The Disk Resource Provider Client.
 package disk

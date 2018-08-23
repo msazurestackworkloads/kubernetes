@@ -89,7 +89,7 @@ func (client VirtualMachineScaleSetRollingUpgradesClient) CancelPreparer(resourc
 		"vmScaleSetName":    autorest.Encode("path", VMScaleSetName),
 	}
 
-	const APIVersion = "2016-03-30"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -156,7 +156,7 @@ func (client VirtualMachineScaleSetRollingUpgradesClient) GetLatestPreparer(reso
 		"vmScaleSetName":    autorest.Encode("path", VMScaleSetName),
 	}
 
-	const APIVersion = "2016-03-30"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -237,7 +237,7 @@ func (client VirtualMachineScaleSetRollingUpgradesClient) StartOSUpgradePreparer
 		"vmScaleSetName":    autorest.Encode("path", VMScaleSetName),
 	}
 
-	const APIVersion = "2016-03-30"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

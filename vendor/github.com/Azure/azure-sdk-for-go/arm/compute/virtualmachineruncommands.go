@@ -79,7 +79,7 @@ func (client VirtualMachineRunCommandsClient) GetPreparer(location string, comma
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-03-30"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -149,7 +149,7 @@ func (client VirtualMachineRunCommandsClient) ListPreparer(location string) (*ht
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2016-03-30"
+	const APIVersion = "2017-03-30"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
