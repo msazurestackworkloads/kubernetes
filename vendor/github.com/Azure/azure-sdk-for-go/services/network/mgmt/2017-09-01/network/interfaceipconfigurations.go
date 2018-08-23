@@ -74,7 +74,7 @@ func (client InterfaceIPConfigurationsClient) GetPreparer(ctx context.Context, r
 		"subscriptionId":       autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2015-06-15"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -141,7 +141,7 @@ func (client InterfaceIPConfigurationsClient) ListPreparer(ctx context.Context, 
 		"subscriptionId":       autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2015-06-15"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
