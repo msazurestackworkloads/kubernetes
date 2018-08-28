@@ -60,7 +60,7 @@ func (c *ManagedDiskController) CreateManagedDisk(diskName string, storageAccoun
 		Location: &c.common.location,
 		Tags:     &newTags,
 		Properties: &disk.Properties{
-			// Azure Stack did not support this property
+			// Remove this parameter for azure stack.
 			//AccountType:  disk.StorageAccountTypes(storageAccountType),
 			DiskSizeGB:   &diskSizeGB,
 			CreationData: &disk.CreationData{CreateOption: disk.Empty},
@@ -79,7 +79,7 @@ func (c *ManagedDiskController) CreateManagedDisk(diskName string, storageAccoun
 	diskID := ""
 
 	err = kwait.ExponentialBackoff(defaultBackOff, func() (bool, error) {
-		provisionState, id, err := c.getDisk(resourceGroup, diskName)
+		provisonState, id, err := c.getDisk(resourceGroup, diskName)
 		diskID = id
 		// We are waiting for provisioningState==Succeeded
 		// We don't want to hand-off managed disks to k8s while they are
@@ -87,7 +87,7 @@ func (c *ManagedDiskController) CreateManagedDisk(diskName string, storageAccoun
 		if err != nil {
 			return false, err
 		}
-		if strings.ToLower(provisionState) == "succeeded" {
+		if strings.ToLower(provisonState) == "succeeded" {
 			return true, nil
 		}
 		return false, nil
@@ -116,8 +116,8 @@ func (c *ManagedDiskController) DeleteManagedDisk(diskURI string) error {
 	if err != nil {
 		return err
 	}
-	// We don't need poll here, k8s will immediately stop referencing the disk
-	// the disk will be eventually deleted - cleanly - by ARM
+	// We don't need poll here, k8s will immediatly stop referencing the disk
+	// the disk will be evantually deleted - cleanly - by ARM
 
 	glog.V(2).Infof("azureDisk - deleted a managed disk: %s", diskURI)
 
