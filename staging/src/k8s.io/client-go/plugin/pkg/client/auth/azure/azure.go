@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -239,13 +240,16 @@ func (ts *azureTokenSource) retrieveTokenFromCfg() (*azureToken, error) {
 		return nil, fmt.Errorf("no expiresOn in cfg: %s", cfgExpiresOn)
 	}
 
+	expiresInInt64, _ := strconv.ParseInt(expiresIn, 10, 64)
+	expiresOnInt64, _ := strconv.ParseInt(expiresOn, 10, 64)
+	notBeforeInt64, _ := strconv.ParseInt(expiresOn, 10, 64)
 	return &azureToken{
 		token: adal.Token{
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
-			ExpiresIn:    expiresIn,
-			ExpiresOn:    expiresOn,
-			NotBefore:    expiresOn,
+			ExpiresIn:    expiresInInt64,
+			ExpiresOn:    expiresOnInt64,
+			NotBefore:    notBeforeInt64,
 			Resource:     fmt.Sprintf("spn:%s", apiserverID),
 			Type:         tokenType,
 		},
@@ -262,8 +266,8 @@ func (ts *azureTokenSource) storeTokenInCfg(token *azureToken) error {
 	newCfg[cfgClientID] = token.clientID
 	newCfg[cfgTenantID] = token.tenantID
 	newCfg[cfgApiserverID] = token.apiserverID
-	newCfg[cfgExpiresIn] = token.token.ExpiresIn
-	newCfg[cfgExpiresOn] = token.token.ExpiresOn
+	newCfg[cfgExpiresIn] = strconv.FormatInt(token.token.ExpiresIn, 10)
+	newCfg[cfgExpiresOn] = strconv.FormatInt(token.token.ExpiresOn, 10)
 
 	err := ts.persister.Persist(newCfg)
 	if err != nil {
