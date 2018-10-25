@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -50,7 +51,13 @@ type AzureAuthConfig struct {
 
 // GetServicePrincipalToken creates a new service principal token based on the configuration
 func GetServicePrincipalToken(config *AzureAuthConfig, env *azure.Environment) (*adal.ServicePrincipalToken, error) {
-	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, config.TenantID)
+	var tenantID string
+	if strings.Contains(strings.ToUpper(env.ActiveDirectoryEndpoint), strings.ToUpper("https://adfs")) {
+		tenantID = "adfs"
+	} else {
+		tenantID = config.TenantID
+	}
+	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("creating the OAuth config: %v", err)
 	}
