@@ -54,8 +54,9 @@ const (
 	backoffJitterDefault         = 1.0
 	maximumLoadBalancerRuleCount = 148 // According to Azure LB rule default limit
 
-	vmTypeVMSS     = "vmss"
-	vmTypeStandard = "standard"
+	vmTypeVMSS         = "vmss"
+	vmTypeStandard     = "standard"
+	adfsIdentitySystem = "ADFS"
 )
 
 // Config holds the configuration parsed from the --cloud-config flag
@@ -105,6 +106,8 @@ type Config struct {
 	AADClientCertPath string `json:"aadClientCertPath" yaml:"aadClientCertPath"`
 	// The password of the client certificate for an AAD application with RBAC access to talk to Azure RM APIs
 	AADClientCertPassword string `json:"aadClientCertPassword" yaml:"aadClientCertPassword"`
+	// The Identity System
+	IdentitySystem string `json:"identitySystem" yaml:"identitySystem"`
 	// Enable exponential backoff to manage resource request retries
 	CloudProviderBackoff bool `json:"cloudProviderBackoff" yaml:"cloudProviderBackoff"`
 	// Backoff retry limit
@@ -229,7 +232,16 @@ func decodePkcs12(pkcs []byte, password string) (*x509.Certificate, *rsa.Private
 
 // GetServicePrincipalToken creates a new service principal token based on the configuration
 func GetServicePrincipalToken(config *Config, env *azure.Environment) (*adal.ServicePrincipalToken, error) {
-	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, config.TenantID)
+	var tenantID string
+	if strings.EqualFold(config.IdentitySystem, adfsIdentitySystem) {
+		tenantID = "adfs"
+	} else {
+		tenantID = config.TenantID
+	}
+	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("creating the OAuth config: %v", err)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("creating the OAuth config: %v", err)
 	}
