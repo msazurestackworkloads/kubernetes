@@ -29,6 +29,8 @@ import (
 	"golang.org/x/crypto/pkcs12"
 )
 
+const adfsIdentitySystem = "ADFS"
+
 // AzureAuthConfig holds auth related part of cloud config
 type AzureAuthConfig struct {
 	// The cloud environment identifier. Takes values from https://github.com/Azure/go-autorest/blob/ec5f4903f77ed9927ac95b19ab8e44ada64c1356/autorest/azure/environments.go#L13
@@ -47,12 +49,14 @@ type AzureAuthConfig struct {
 	UseManagedIdentityExtension bool `json:"useManagedIdentityExtension" yaml:"useManagedIdentityExtension"`
 	// The ID of the Azure Subscription that the cluster is deployed in
 	SubscriptionID string `json:"subscriptionId" yaml:"subscriptionId"`
+	// The ID of the Azure Subscription that the cluster is deployed in
+	IdentitySystem string `json:"identitySystem" yaml:"identitySystem"`
 }
 
 // GetServicePrincipalToken creates a new service principal token based on the configuration
 func GetServicePrincipalToken(config *AzureAuthConfig, env *azure.Environment) (*adal.ServicePrincipalToken, error) {
 	var tenantID string
-	if strings.Contains(strings.ToUpper(env.ActiveDirectoryEndpoint), strings.ToUpper("https://adfs")) {
+	if strings.EqualFold(config.IdentitySystem, adfsIdentitySystem) {
 		tenantID = "adfs"
 	} else {
 		tenantID = config.TenantID
