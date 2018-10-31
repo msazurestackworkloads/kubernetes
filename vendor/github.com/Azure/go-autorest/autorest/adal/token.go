@@ -25,7 +25,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -70,22 +69,30 @@ type Token struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 
-	ExpiresIn string `json:"expires_in"`
-	ExpiresOn string `json:"expires_on"`
-	NotBefore string `json:"not_before"`
+	ExpiresIn json.Number `json:"expires_in"`
+	ExpiresOn json.Number `json:"expires_on"`
+	NotBefore json.Number `json:"not_before"`
 
 	Resource string `json:"resource"`
 	Type     string `json:"token_type"`
 }
 
+func newToken() Token {
+	return Token{
+		ExpiresIn: "0",
+		ExpiresOn: "0",
+		NotBefore: "0",
+	}
+}
+
 // Expires returns the time.Time when the Token expires.
 func (t Token) Expires() time.Time {
-	s, err := strconv.Atoi(t.ExpiresOn)
+	s, err := t.ExpiresOn.Float64()
 	if err != nil {
 		s = -3600
 	}
 
-	expiration := date.NewUnixTimeFromSeconds(float64(s))
+	expiration := date.NewUnixTimeFromSeconds(s)
 
 	return time.Time(expiration).UTC()
 }
@@ -213,6 +220,7 @@ type ServicePrincipalToken struct {
 // NewServicePrincipalTokenWithSecret create a ServicePrincipalToken using the supplied ServicePrincipalSecret implementation.
 func NewServicePrincipalTokenWithSecret(oauthConfig OAuthConfig, id string, resource string, secret ServicePrincipalSecret, callbacks ...TokenRefreshCallback) (*ServicePrincipalToken, error) {
 	spt := &ServicePrincipalToken{
+		Token:            newToken(),
 		oauthConfig:      oauthConfig,
 		secret:           secret,
 		clientID:         id,
@@ -306,6 +314,7 @@ func NewServicePrincipalTokenFromMSI(msiEndpoint, resource string, callbacks ...
 	}
 
 	spt := &ServicePrincipalToken{
+		Token:            newToken(),
 		oauthConfig:      *oauthConfig,
 		secret:           &ServicePrincipalMSISecret{},
 		resource:         resource,
