@@ -351,7 +351,7 @@ var _ = utils.SIGDescribe("PersistentVolumes-local ", func() {
 			ep := &eventPatterns{
 				reason:  "FailedMount",
 				pattern: make([]string, 2)}
-			ep.pattern = append(ep.pattern, "MountVolume.SetUp failed")
+			ep.pattern = append(ep.pattern, "MountVolume", "failed")
 
 			testVol := &localTestVolume{
 				node:            config.node0,
@@ -919,7 +919,7 @@ func setupLocalVolumeDirectoryLink(config *localTestConfig, node *v1.Node) *loca
 	testDirName := "local-volume-test-" + string(uuid.NewUUID())
 	hostDir := filepath.Join(hostBase, testDirName)
 	hostDirBackend := hostDir + "-backend"
-	cmd := fmt.Sprintf("mkdir %s && ln -s %s %s", hostDirBackend, hostDirBackend, hostDir)
+	cmd := fmt.Sprintf("mkdir %s && sudo ln -s %s %s", hostDirBackend, hostDirBackend, hostDir)
 	_, err := framework.IssueSSHCommandWithResult(cmd, framework.TestContext.Provider, node)
 	Expect(err).NotTo(HaveOccurred())
 	// Populate volume with testFile containing testFileContent.
@@ -940,7 +940,7 @@ func setupLocalVolumeDirectoryLinkBindMounted(config *localTestConfig, node *v1.
 	testDirName := "local-volume-test-" + string(uuid.NewUUID())
 	hostDir := filepath.Join(hostBase, testDirName)
 	hostDirBackend := hostDir + "-backend"
-	cmd := fmt.Sprintf("mkdir %s && sudo mount --bind %s %s && ln -s %s %s",
+	cmd := fmt.Sprintf("mkdir %s && sudo mount --bind %s %s && sudo ln -s %s %s",
 		hostDirBackend, hostDirBackend, hostDirBackend, hostDirBackend, hostDir)
 	_, err := framework.IssueSSHCommandWithResult(cmd, framework.TestContext.Provider, node)
 	Expect(err).NotTo(HaveOccurred())
@@ -1027,7 +1027,7 @@ func cleanupLocalVolumeDirectoryLink(config *localTestConfig, volume *localTestV
 	By("Removing the test directory")
 	hostDir := volume.hostDir
 	hostDirBackend := hostDir + "-backend"
-	removeCmd := fmt.Sprintf("rm -r %s && rm -r %s", hostDir, hostDirBackend)
+	removeCmd := fmt.Sprintf("sudo rm -r %s && rm -r %s", hostDir, hostDirBackend)
 	err := framework.IssueSSHCommand(removeCmd, framework.TestContext.Provider, volume.node)
 	Expect(err).NotTo(HaveOccurred())
 }
@@ -1046,7 +1046,7 @@ func cleanupLocalVolumeDirectoryLinkBindMounted(config *localTestConfig, volume 
 	By("Removing the test directory")
 	hostDir := volume.hostDir
 	hostDirBackend := hostDir + "-backend"
-	removeCmd := fmt.Sprintf("rm %s && sudo umount %s && rm -r %s", hostDir, hostDirBackend, hostDirBackend)
+	removeCmd := fmt.Sprintf("sudo rm %s && sudo umount %s && rm -r %s", hostDir, hostDirBackend, hostDirBackend)
 	err := framework.IssueSSHCommand(removeCmd, framework.TestContext.Provider, volume.node)
 	Expect(err).NotTo(HaveOccurred())
 }
@@ -1349,6 +1349,7 @@ func setupLocalVolumeProvisioner(config *localTestConfig) {
 	By("Bootstrapping local volume provisioner")
 	createServiceAccount(config)
 	createProvisionerClusterRoleBinding(config)
+	utils.PrivilegedTestPSPClusterRoleBinding(config.client, config.ns, false /* teardown */, []string{testServiceAccount})
 	createVolumeConfigMap(config)
 
 	for _, node := range config.nodes {
@@ -1362,6 +1363,7 @@ func setupLocalVolumeProvisioner(config *localTestConfig) {
 func cleanupLocalVolumeProvisioner(config *localTestConfig) {
 	By("Cleaning up cluster role binding")
 	deleteClusterRoleBinding(config)
+	utils.PrivilegedTestPSPClusterRoleBinding(config.client, config.ns, true /* teardown */, []string{testServiceAccount})
 
 	for _, node := range config.nodes {
 		By(fmt.Sprintf("Removing the test discovery directory on node %v", node.Name))
