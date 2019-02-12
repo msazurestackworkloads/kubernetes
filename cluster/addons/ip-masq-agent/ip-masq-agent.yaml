@@ -24,11 +24,14 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      priorityClassName: system-node-critical
       serviceAccountName: ip-masq-agent
       hostNetwork: true
       containers:
       - name: ip-masq-agent
-        image: gcr.io/google-containers/ip-masq-agent-amd64:v2.0.2
+        image: k8s.gcr.io/ip-masq-agent-amd64:v2.1.1
+        args:
+          - --masq-chain=IP-MASQ
         resources:
           requests:
             cpu: 10m
@@ -51,5 +54,9 @@ spec:
               - key: config
                 path: ip-masq-agent
       tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
       - key: "CriticalAddonsOnly"
         operator: "Exists"

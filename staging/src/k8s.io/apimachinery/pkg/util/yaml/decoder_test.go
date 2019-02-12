@@ -54,6 +54,36 @@ stuff: 1
 	}
 }
 
+func TestYAMLDecoderCallsAfterErrShortBufferRestOfFrame(t *testing.T) {
+	d := `---
+stuff: 1
+	test-foo: 1`
+	r := NewDocumentDecoder(ioutil.NopCloser(bytes.NewReader([]byte(d))))
+	b := make([]byte, 12)
+	n, err := r.Read(b)
+	if err != io.ErrShortBuffer || n != 12 {
+		t.Fatalf("expected ErrShortBuffer: %d / %v", n, err)
+	}
+	expected := "---\nstuff: 1"
+	if string(b) != expected {
+		t.Fatalf("expected bytes read to be: %s  got: %s", expected, string(b))
+	}
+	b = make([]byte, 13)
+	n, err = r.Read(b)
+	if err != nil || n != 13 {
+		t.Fatalf("expected nil: %d / %v", n, err)
+	}
+	expected = "\n\ttest-foo: 1"
+	if string(b) != expected {
+		t.Fatalf("expected bytes read to be: '%s'  got: '%s'", expected, string(b))
+	}
+	b = make([]byte, 15)
+	n, err = r.Read(b)
+	if err != io.EOF || n != 0 {
+		t.Fatalf("expected EOF: %d / %v", n, err)
+	}
+}
+
 func TestSplitYAMLDocument(t *testing.T) {
 	testCases := []struct {
 		input  string
@@ -167,8 +197,8 @@ stuff: 1
 		t.Fatal("expected error with yaml: violate, got no error")
 	}
 	fmt.Printf("err: %s\n", err.Error())
-	if !strings.Contains(err.Error(), "yaml: line 2:") {
-		t.Fatalf("expected %q to have 'yaml: line 2:' found a tab character", err.Error())
+	if !strings.Contains(err.Error(), "yaml: line 3:") {
+		t.Fatalf("expected %q to have 'yaml: line 3:' found a tab character", err.Error())
 	}
 }
 

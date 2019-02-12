@@ -17,15 +17,20 @@ limitations under the License.
 package service
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
+	core "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/kubernetes/pkg/api/testapi"
 	fakecloud "k8s.io/kubernetes/pkg/cloudprovider/providers/fake"
@@ -117,6 +122,24 @@ func TestCreateExternalLoadBalancer(t *testing.T) {
 					Ports: []v1.ServicePort{{
 						Port:     80,
 						Protocol: v1.ProtocolTCP,
+					}},
+					Type: v1.ServiceTypeLoadBalancer,
+				},
+			},
+			expectErr:           false,
+			expectCreateAttempt: true,
+		},
+		{
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sctp-service",
+					Namespace: "default",
+					SelfLink:  testapi.Default.SelfLink("services", "sctp-service"),
+				},
+				Spec: v1.ServiceSpec{
+					Ports: []v1.ServicePort{{
+						Port:     80,
+						Protocol: v1.ProtocolSCTP,
 					}},
 					Type: v1.ServiceTypeLoadBalancer,
 				},
@@ -247,9 +270,8 @@ func TestUpdateNodesInExternalLoadBalancer(t *testing.T) {
 		controller, cloud, _ := newController()
 
 		var services []*v1.Service
-		for _, service := range item.services {
-			services = append(services, service)
-		}
+		services = append(services, item.services...)
+
 		if err := controller.updateLoadBalancerHosts(services, nodes); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -306,9 +328,7 @@ func TestGetNodeConditionPredicate(t *testing.T) {
 // TODO(a-robinson): Add tests for update/sync/delete.
 
 func TestProcessServiceUpdate(t *testing.T) {
-
 	var controller *ServiceController
-	var cloud *fakecloud.FakeCloud
 
 	//A pair of old and new loadbalancer IP address
 	oldLBIP := "192.168.1.1"
@@ -319,7 +339,7 @@ func TestProcessServiceUpdate(t *testing.T) {
 		key        string
 		updateFn   func(*v1.Service) *v1.Service //Manipulate the structure
 		svc        *v1.Service
-		expectedFn func(*v1.Service, error) error //Error comparision function
+		expectedFn func(*v1.Service, error) error //Error comparison function
 	}{
 		{
 			testName: "If updating a valid service",
@@ -327,7 +347,7 @@ func TestProcessServiceUpdate(t *testing.T) {
 			svc:      defaultExternalService(),
 			updateFn: func(svc *v1.Service) *v1.Service {
 
-				controller, cloud, _ = newController()
+				controller, _, _ = newController()
 				controller.cache.getOrCreate("validKey")
 				return svc
 
@@ -395,10 +415,41 @@ func TestProcessServiceUpdate(t *testing.T) {
 
 }
 
+// TestConflictWhenProcessServiceUpdate tests if processServiceUpdate will
+// retry creating the load balancer if the update operation returns a conflict
+// error.
+func TestConflictWhenProcessServiceUpdate(t *testing.T) {
+	svcName := "conflict-lb"
+	svc := newService(svcName, types.UID("123"), v1.ServiceTypeLoadBalancer)
+	controller, _, client := newController()
+	client.PrependReactor("update", "services", func(action core.Action) (bool, runtime.Object, error) {
+		update := action.(core.UpdateAction)
+		return true, update.GetObject(), apierrors.NewConflict(action.GetResource().GroupResource(), svcName, errors.New("Object changed"))
+	})
+
+	svcCache := controller.cache.getOrCreate(svcName)
+	if err := controller.processServiceUpdate(svcCache, svc, svcName); err == nil {
+		t.Fatalf("controller.processServiceUpdate() = nil, want error")
+	}
+
+	retryMsg := "Error creating load balancer (will retry)"
+	if gotEvent := func() bool {
+		events := controller.eventRecorder.(*record.FakeRecorder).Events
+		for len(events) > 0 {
+			e := <-events
+			if strings.Contains(e, retryMsg) {
+				return true
+			}
+		}
+		return false
+	}(); !gotEvent {
+		t.Errorf("controller.processServiceUpdate() = can't find retry creating lb event, want event contains %q", retryMsg)
+	}
+}
+
 func TestSyncService(t *testing.T) {
 
 	var controller *ServiceController
-	var cloud *fakecloud.FakeCloud
 
 	testCases := []struct {
 		testName   string
@@ -410,7 +461,7 @@ func TestSyncService(t *testing.T) {
 			testName: "if an invalid service name is synced",
 			key:      "invalid/key/string",
 			updateFn: func() {
-				controller, cloud, _ = newController()
+				controller, _, _ = newController()
 
 			},
 			expectedFn: func(e error) error {
@@ -429,7 +480,7 @@ func TestSyncService(t *testing.T) {
 			testName: "if an invalid service is synced",
 			key: "somethingelse",
 			updateFn: func() {
-				controller, cloud, _ = newController()
+				controller, _, _ = newController()
 				srv := controller.cache.getOrCreate("external-balancer")
 				srv.state = defaultExternalService()
 			},
@@ -443,7 +494,7 @@ func TestSyncService(t *testing.T) {
 			key:      "external-balancer",
 			updateFn: func() {
 				testSvc := defaultExternalService()
-				controller, cloud, _ = newController()
+				controller, _, _ = newController()
 				controller.enqueueService(testSvc)
 				svc := controller.cache.getOrCreate("external-balancer")
 				svc.state = testSvc
@@ -489,7 +540,7 @@ func TestProcessServiceDeletion(t *testing.T) {
 		expectedFn func(svcErr error) error // Function to check if the returned value is expected
 	}{
 		{
-			testName: "If an non-existant service is deleted",
+			testName: "If an non-existent service is deleted",
 			updateFn: func(controller *ServiceController) {
 				// Does not do anything
 			},
@@ -779,13 +830,21 @@ func TestServiceCache(t *testing.T) {
 //Test a utility functions as its not easy to unit test nodeSyncLoop directly
 func TestNodeSlicesEqualForLB(t *testing.T) {
 	numNodes := 10
-	nArray := make([]*v1.Node, 10)
-
+	nArray := make([]*v1.Node, numNodes)
+	mArray := make([]*v1.Node, numNodes)
 	for i := 0; i < numNodes; i++ {
 		nArray[i] = &v1.Node{}
-		nArray[i].Name = fmt.Sprintf("node1")
+		nArray[i].Name = fmt.Sprintf("node%d", i)
 	}
+	for i := 0; i < numNodes; i++ {
+		mArray[i] = &v1.Node{}
+		mArray[i].Name = fmt.Sprintf("node%d", i+1)
+	}
+
 	if !nodeSlicesEqualForLB(nArray, nArray) {
 		t.Errorf("nodeSlicesEqualForLB() Expected=true Obtained=false")
+	}
+	if nodeSlicesEqualForLB(nArray, mArray) {
+		t.Errorf("nodeSlicesEqualForLB() Expected=false Obtained=true")
 	}
 }

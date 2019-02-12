@@ -21,10 +21,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/kubernetes/pkg/scheduler/algorithm"
-	priorityutil "k8s.io/kubernetes/pkg/scheduler/algorithm/priorities/util"
-	"k8s.io/kubernetes/pkg/scheduler/schedulercache"
+	schedulercache "k8s.io/kubernetes/pkg/scheduler/cache"
 )
 
+// PriorityMetadataFactory is a factory to produce PriorityMetadata.
 type PriorityMetadataFactory struct {
 	serviceLister     algorithm.ServiceLister
 	controllerLister  algorithm.ControllerLister
@@ -32,6 +32,7 @@ type PriorityMetadataFactory struct {
 	statefulSetLister algorithm.StatefulSetLister
 }
 
+// NewPriorityMetadataFactory creates a PriorityMetadataFactory.
 func NewPriorityMetadataFactory(serviceLister algorithm.ServiceLister, controllerLister algorithm.ControllerLister, replicaSetLister algorithm.ReplicaSetLister, statefulSetLister algorithm.StatefulSetLister) algorithm.PriorityMetadataProducer {
 	factory := &PriorityMetadataFactory{
 		serviceLister:     serviceLister,
@@ -50,6 +51,7 @@ type priorityMetadata struct {
 	podSelectors            []labels.Selector
 	controllerRef           *metav1.OwnerReference
 	podFirstServiceSelector labels.Selector
+	totalNumNodes           int
 }
 
 // PriorityMetadata is a PriorityMetadataProducer.  Node info can be nil.
@@ -63,8 +65,9 @@ func (pmf *PriorityMetadataFactory) PriorityMetadata(pod *v1.Pod, nodeNameToInfo
 		podTolerations:          getAllTolerationPreferNoSchedule(pod.Spec.Tolerations),
 		affinity:                pod.Spec.Affinity,
 		podSelectors:            getSelectors(pod, pmf.serviceLister, pmf.controllerLister, pmf.replicaSetLister, pmf.statefulSetLister),
-		controllerRef:           priorityutil.GetControllerRef(pod),
+		controllerRef:           metav1.GetControllerOf(pod),
 		podFirstServiceSelector: getFirstServiceSelector(pod, pmf.serviceLister),
+		totalNumNodes:           len(nodeNameToInfo),
 	}
 }
 

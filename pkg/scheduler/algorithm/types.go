@@ -17,13 +17,19 @@ limitations under the License.
 package algorithm
 
 import (
-	apps "k8s.io/api/apps/v1beta1"
+	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
 	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
-	"k8s.io/kubernetes/pkg/scheduler/schedulercache"
+	schedulercache "k8s.io/kubernetes/pkg/scheduler/cache"
 )
+
+// NodeFieldSelectorKeys is a map that: the key are node field selector keys; the values are
+// the functions to get the value of the node field.
+var NodeFieldSelectorKeys = map[string]func(*v1.Node) string{
+	schedulerapi.NodeFieldSelectorKeyNodeName: func(n *v1.Node) string { return n.Name },
+}
 
 // FitPredicate is a function that indicates if a pod fits into an existing node.
 // The failure information is given by the error.
@@ -47,10 +53,12 @@ type PredicateMetadataProducer func(pod *v1.Pod, nodeNameToInfo map[string]*sche
 // is now used for only for priority functions. For predicates please use PredicateMetadataProducer.
 type PriorityMetadataProducer func(pod *v1.Pod, nodeNameToInfo map[string]*schedulercache.NodeInfo) interface{}
 
+// PriorityFunction is a function that computes scores for all nodes.
 // DEPRECATED
 // Use Map-Reduce pattern for priority functions.
 type PriorityFunction func(pod *v1.Pod, nodeNameToInfo map[string]*schedulercache.NodeInfo, nodes []*v1.Node) (schedulerapi.HostPriorityList, error)
 
+// PriorityConfig is a config used for a priority function.
 type PriorityConfig struct {
 	Name   string
 	Map    PriorityMapFunction
@@ -71,11 +79,10 @@ func EmptyPriorityMetadataProducer(pod *v1.Pod, nodeNameToInfo map[string]*sched
 	return nil
 }
 
+// PredicateFailureReason interface represents the failure reason of a predicate.
 type PredicateFailureReason interface {
 	GetReason() string
 }
-
-type GetEquivalencePodFunc func(pod *v1.Pod) interface{}
 
 // NodeLister interface represents anything that can list nodes for a scheduler.
 type NodeLister interface {
@@ -84,6 +91,9 @@ type NodeLister interface {
 	List() ([]*v1.Node, error)
 }
 
+// PodFilter is a function to filter a pod. If pod passed return true else return false.
+type PodFilter func(*v1.Pod) bool
+
 // PodLister interface represents anything that can list pods for a scheduler.
 type PodLister interface {
 	// We explicitly return []*v1.Pod, instead of v1.PodList, to avoid
@@ -91,7 +101,7 @@ type PodLister interface {
 	List(labels.Selector) ([]*v1.Pod, error)
 	// This is similar to "List()", but the returned slice does not
 	// contain pods that don't pass `podFilter`.
-	FilteredList(podFilter schedulercache.PodFilter, selector labels.Selector) ([]*v1.Pod, error)
+	FilteredList(podFilter PodFilter, selector labels.Selector) ([]*v1.Pod, error)
 }
 
 // ServiceLister interface represents anything that can produce a list of services; the list is consumed by a scheduler.
@@ -113,7 +123,13 @@ type ControllerLister interface {
 // ReplicaSetLister interface represents anything that can produce a list of ReplicaSet; the list is consumed by a scheduler.
 type ReplicaSetLister interface {
 	// Gets the replicasets for the given pod
-	GetPodReplicaSets(*v1.Pod) ([]*extensions.ReplicaSet, error)
+	GetPodReplicaSets(*v1.Pod) ([]*apps.ReplicaSet, error)
+}
+
+// PDBLister interface represents anything that can list PodDisruptionBudget objects.
+type PDBLister interface {
+	// List() returns a list of PodDisruptionBudgets matching the selector.
+	List(labels.Selector) ([]*policyv1beta1.PodDisruptionBudget, error)
 }
 
 var _ ControllerLister = &EmptyControllerLister{}
@@ -137,7 +153,7 @@ var _ ReplicaSetLister = &EmptyReplicaSetLister{}
 type EmptyReplicaSetLister struct{}
 
 // GetPodReplicaSets returns nil
-func (f EmptyReplicaSetLister) GetPodReplicaSets(pod *v1.Pod) (rss []*extensions.ReplicaSet, err error) {
+func (f EmptyReplicaSetLister) GetPodReplicaSets(pod *v1.Pod) (rss []*apps.ReplicaSet, err error) {
 	return nil, nil
 }
 
@@ -157,6 +173,7 @@ func (f EmptyStatefulSetLister) GetPodStatefulSets(pod *v1.Pod) (sss []*apps.Sta
 	return nil, nil
 }
 
+// PredicateMetadata interface represents anything that can access a predicate metadata.
 type PredicateMetadata interface {
 	ShallowCopy() PredicateMetadata
 	AddPod(addedPod *v1.Pod, nodeInfo *schedulercache.NodeInfo) error

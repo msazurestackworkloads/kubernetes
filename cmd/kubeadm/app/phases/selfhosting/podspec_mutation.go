@@ -22,7 +22,6 @@ import (
 
 	"k8s.io/api/core/v1"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
-	"k8s.io/kubernetes/cmd/kubeadm/app/features"
 	kubeadmutil "k8s.io/kubernetes/cmd/kubeadm/app/util"
 )
 
@@ -36,7 +35,7 @@ const (
 // PodSpecMutatorFunc is a function capable of mutating a PodSpec
 type PodSpecMutatorFunc func(*v1.PodSpec)
 
-// GetDefaultMutators gets the mutator functions that alwasy should be used
+// GetDefaultMutators gets the mutator functions that always should be used
 func GetDefaultMutators() map[string][]PodSpecMutatorFunc {
 	return map[string][]PodSpecMutatorFunc{
 		kubeadmconstants.KubeAPIServer: {
@@ -59,18 +58,18 @@ func GetDefaultMutators() map[string][]PodSpecMutatorFunc {
 }
 
 // GetMutatorsFromFeatureGates returns all mutators needed based on the feature gates passed
-func GetMutatorsFromFeatureGates(featureGates map[string]bool) map[string][]PodSpecMutatorFunc {
+func GetMutatorsFromFeatureGates(certsInSecrets bool) map[string][]PodSpecMutatorFunc {
 	// Here the map of different mutators to use for the control plane's podspec is stored
 	mutators := GetDefaultMutators()
 
-	// Some extra work to be done if we should store the control plane certificates in Secrets
-	if features.Enabled(featureGates, features.StoreCertsInSecrets) {
-
+	if certsInSecrets {
+		// Some extra work to be done if we should store the control plane certificates in Secrets
 		// Add the store-certs-in-secrets-specific mutators here so that the self-hosted component starts using them
 		mutators[kubeadmconstants.KubeAPIServer] = append(mutators[kubeadmconstants.KubeAPIServer], setSelfHostedVolumesForAPIServer)
 		mutators[kubeadmconstants.KubeControllerManager] = append(mutators[kubeadmconstants.KubeControllerManager], setSelfHostedVolumesForControllerManager)
 		mutators[kubeadmconstants.KubeScheduler] = append(mutators[kubeadmconstants.KubeScheduler], setSelfHostedVolumesForScheduler)
 	}
+
 	return mutators
 }
 

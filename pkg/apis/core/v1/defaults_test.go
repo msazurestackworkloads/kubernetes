@@ -27,8 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	utilfeaturetesting "k8s.io/apiserver/pkg/util/feature/testing"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	corev1 "k8s.io/kubernetes/pkg/apis/core/v1"
+	"k8s.io/kubernetes/pkg/features"
+	utilpointer "k8s.io/utils/pointer"
 
 	// enforce that all types are installed
 	_ "k8s.io/kubernetes/pkg/api/testapi"
@@ -164,12 +167,6 @@ func TestSetDefaultReplicationController(t *testing.T) {
 	}
 }
 
-func newInt(val int32) *int32 {
-	p := new(int32)
-	*p = val
-	return p
-}
-
 func TestSetDefaultReplicationControllerReplicas(t *testing.T) {
 	tests := []struct {
 		rc             v1.ReplicationController
@@ -192,7 +189,7 @@ func TestSetDefaultReplicationControllerReplicas(t *testing.T) {
 		{
 			rc: v1.ReplicationController{
 				Spec: v1.ReplicationControllerSpec{
-					Replicas: newInt(0),
+					Replicas: utilpointer.Int32Ptr(0),
 					Template: &v1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
@@ -207,7 +204,7 @@ func TestSetDefaultReplicationControllerReplicas(t *testing.T) {
 		{
 			rc: v1.ReplicationController{
 				Spec: v1.ReplicationControllerSpec{
-					Replicas: newInt(3),
+					Replicas: utilpointer.Int32Ptr(3),
 					Template: &v1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
@@ -808,6 +805,7 @@ func TestSetDefaultSecret(t *testing.T) {
 }
 
 func TestSetDefaultPersistentVolume(t *testing.T) {
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.BlockVolume, false)()
 	pv := &v1.PersistentVolume{}
 	obj2 := roundTrip(t, runtime.Object(pv))
 	pv2 := obj2.(*v1.PersistentVolume)
@@ -827,10 +825,7 @@ func TestSetDefaultPersistentVolume(t *testing.T) {
 	}
 
 	// When feature gate is enabled, field should be defaulted
-	err := utilfeature.DefaultFeatureGate.Set("BlockVolume=true")
-	if err != nil {
-		t.Fatalf("Failed to enable feature gate for BlockVolume: %v", err)
-	}
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.BlockVolume, true)()
 	obj3 := roundTrip(t, runtime.Object(pv)).(*v1.PersistentVolume)
 	outputMode3 := obj3.Spec.VolumeMode
 
@@ -839,15 +834,10 @@ func TestSetDefaultPersistentVolume(t *testing.T) {
 	} else if *outputMode3 != defaultMode {
 		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: %+v", defaultMode, outputMode3)
 	}
-
-	err = utilfeature.DefaultFeatureGate.Set("BlockVolume=false")
-	if err != nil {
-		t.Fatalf("Failed to disable feature gate for BlockVolume: %v", err)
-	}
-
 }
 
 func TestSetDefaultPersistentVolumeClaim(t *testing.T) {
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.BlockVolume, false)()
 	pvc := &v1.PersistentVolumeClaim{}
 	obj2 := roundTrip(t, runtime.Object(pvc))
 	pvc2 := obj2.(*v1.PersistentVolumeClaim)
@@ -864,10 +854,7 @@ func TestSetDefaultPersistentVolumeClaim(t *testing.T) {
 	}
 
 	// When feature gate is enabled, field should be defaulted
-	err := utilfeature.DefaultFeatureGate.Set("BlockVolume=true")
-	if err != nil {
-		t.Fatalf("Failed to enable feature gate for BlockVolume: %v", err)
-	}
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.BlockVolume, true)()
 	obj3 := roundTrip(t, runtime.Object(pvc)).(*v1.PersistentVolumeClaim)
 	outputMode3 := obj3.Spec.VolumeMode
 
@@ -875,11 +862,6 @@ func TestSetDefaultPersistentVolumeClaim(t *testing.T) {
 		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: nil", defaultMode)
 	} else if *outputMode3 != defaultMode {
 		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: %+v", defaultMode, outputMode3)
-	}
-
-	err = utilfeature.DefaultFeatureGate.Set("BlockVolume=false")
-	if err != nil {
-		t.Fatalf("Failed to disable feature gate for BlockVolume: %v", err)
 	}
 }
 
@@ -1035,20 +1017,6 @@ func TestSetDefaultPodSpecHostNetwork(t *testing.T) {
 	hostPortNum = s2.InitContainers[0].Ports[0].HostPort
 	if hostPortNum != portNum {
 		t.Errorf("Expected container port to be defaulted, was made %d instead of %d", hostPortNum, portNum)
-	}
-}
-
-func TestSetDefaultNodeExternalID(t *testing.T) {
-	name := "node0"
-	n := &v1.Node{}
-	n.Name = name
-	obj2 := roundTrip(t, runtime.Object(n))
-	n2 := obj2.(*v1.Node)
-	if n2.Spec.ExternalID != name {
-		t.Errorf("Expected default External ID: %s, got: %s", name, n2.Spec.ExternalID)
-	}
-	if n2.Spec.ProviderID != "" {
-		t.Errorf("Expected empty default Cloud Provider ID, got: %s", n2.Spec.ProviderID)
 	}
 }
 
@@ -1274,7 +1242,7 @@ func TestDefaultRequestIsNotSetForReplicationController(t *testing.T) {
 	}
 	rc := &v1.ReplicationController{
 		Spec: v1.ReplicationControllerSpec{
-			Replicas: newInt(3),
+			Replicas: utilpointer.Int32Ptr(3),
 			Template: &v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
@@ -1387,5 +1355,13 @@ func TestSetDefaultHostPathVolumeSource(t *testing.T) {
 
 	if defaultType == nil || *defaultType != expectedType {
 		t.Errorf("Expected v1.HostPathVolumeSource default type %v, got %v", expectedType, defaultType)
+	}
+}
+
+func TestSetDefaultEnableServiceLinks(t *testing.T) {
+	pod := &v1.Pod{}
+	output := roundTrip(t, runtime.Object(pod)).(*v1.Pod)
+	if output.Spec.EnableServiceLinks == nil || *output.Spec.EnableServiceLinks != v1.DefaultEnableServiceLinks {
+		t.Errorf("Expected enableServiceLinks value: %+v\ngot: %+v\n", v1.DefaultEnableServiceLinks, *output.Spec.EnableServiceLinks)
 	}
 }
