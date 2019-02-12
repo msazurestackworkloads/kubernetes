@@ -19,22 +19,23 @@ package vsphere
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/vmware/govmomi/vim25"
-
-	"fmt"
-
-	"path/filepath"
-
 	"github.com/vmware/govmomi/vim25/mo"
+
+	"k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/cloudprovider/providers/vsphere/vclib"
 	"k8s.io/kubernetes/pkg/cloudprovider/providers/vsphere/vclib/diskmanagers"
+	"k8s.io/kubernetes/pkg/util/version"
 )
 
 const (
@@ -43,6 +44,9 @@ const (
 	Folder                = "Folder"
 	VirtualMachine        = "VirtualMachine"
 	DummyDiskName         = "kube-dummyDisk.vmdk"
+	UUIDPath              = "/sys/class/dmi/id/product_serial"
+	UUIDPrefix            = "VMware-"
+	ProviderPrefix        = "vsphere://"
 	vSphereConfFileEnvVar = "VSPHERE_CONF_FILE"
 )
 
@@ -293,11 +297,15 @@ func (vs *VSphere) cleanUpDummyVMs(dummyVMPrefix string) {
 			continue
 		}
 		// A write lock is acquired to make sure the cleanUp routine doesn't delete any VM's created by ongoing PVC requests.
-		defer cleanUpDummyVMLock.Lock()
-		err = diskmanagers.CleanUpDummyVMs(ctx, vmFolder, dc)
-		if err != nil {
-			glog.V(4).Infof("Unable to clean up dummy VM's in the kubernetes cluster: %q. err: %+v", vs.cfg.Workspace.Folder, err)
+		cleanUpDummyVMs := func() {
+			cleanUpDummyVMLock.Lock()
+			defer cleanUpDummyVMLock.Unlock()
+			err = diskmanagers.CleanUpDummyVMs(ctx, vmFolder, dc)
+			if err != nil {
+				glog.V(4).Infof("Unable to clean up dummy VM's in the kubernetes cluster: %q. err: %+v", vs.cfg.Workspace.Folder, err)
+			}
 		}
+		cleanUpDummyVMs()
 	}
 }
 
@@ -468,8 +476,14 @@ func (vs *VSphere) checkDiskAttached(ctx context.Context, nodes []k8stypes.NodeN
 		if err != nil {
 			return nodesToRetry, err
 		}
-		glog.V(9).Infof("Verifying volume for nodeName: %q with nodeuuid: %s", nodeName, node.Status.NodeInfo.SystemUUID, vmMoMap)
-		vclib.VerifyVolumePathsForVM(vmMoMap[strings.ToLower(node.Status.NodeInfo.SystemUUID)], nodeVolumes[nodeName], convertToString(nodeName), attached)
+		nodeUUID, err := GetNodeUUID(&node)
+		if err != nil {
+			glog.Errorf("Node Discovery failed to get node uuid for node %s with error: %v", node.Name, err)
+			return nodesToRetry, err
+		}
+		nodeUUID = strings.ToLower(nodeUUID)
+		glog.V(9).Infof("Verifying volume for node %s with nodeuuid %q: %v", nodeName, nodeUUID, vmMoMap)
+		vclib.VerifyVolumePathsForVM(vmMoMap[nodeUUID], nodeVolumes[nodeName], convertToString(nodeName), attached)
 	}
 	return nodesToRetry, nil
 }
@@ -509,4 +523,81 @@ func (vs *VSphere) IsDummyVMPresent(vmName string) (bool, error) {
 	}
 
 	return isDummyVMPresent, nil
+}
+
+func (vs *VSphere) GetNodeNameFromProviderID(providerID string) (string, error) {
+	var nodeName string
+	nodes, err := vs.nodeManager.GetNodeDetails()
+	if err != nil {
+		glog.Errorf("Error while obtaining Kubernetes node nodeVmDetail details. error : %+v", err)
+		return "", err
+	}
+	for _, node := range nodes {
+		// ProviderID is UUID for nodes v1.9.3+
+		if node.VMUUID == GetUUIDFromProviderID(providerID) || node.NodeName == providerID {
+			nodeName = node.NodeName
+			break
+		}
+	}
+	if nodeName == "" {
+		msg := fmt.Sprintf("Error while obtaining Kubernetes nodename for providerID %s.", providerID)
+		return "", errors.New(msg)
+	}
+	return nodeName, nil
+}
+
+func GetVMUUID() (string, error) {
+	id, err := ioutil.ReadFile(UUIDPath)
+	if err != nil {
+		return "", fmt.Errorf("error retrieving vm uuid: %s", err)
+	}
+	uuidFromFile := string(id[:])
+	//strip leading and trailing white space and new line char
+	uuid := strings.TrimSpace(uuidFromFile)
+	// check the uuid starts with "VMware-"
+	if !strings.HasPrefix(uuid, UUIDPrefix) {
+		return "", fmt.Errorf("Failed to match Prefix, UUID read from the file is %v", uuidFromFile)
+	}
+	// Strip the prefix and white spaces and -
+	uuid = strings.Replace(uuid[len(UUIDPrefix):(len(uuid))], " ", "", -1)
+	uuid = strings.Replace(uuid, "-", "", -1)
+	if len(uuid) != 32 {
+		return "", fmt.Errorf("Length check failed, UUID read from the file is %v", uuidFromFile)
+	}
+	// need to add dashes, e.g. "564d395e-d807-e18a-cb25-b79f65eb2b9f"
+	uuid = fmt.Sprintf("%s-%s-%s-%s-%s", uuid[0:8], uuid[8:12], uuid[12:16], uuid[16:20], uuid[20:32])
+	return uuid, nil
+}
+
+func GetUUIDFromProviderID(providerID string) string {
+	return strings.TrimPrefix(providerID, ProviderPrefix)
+}
+
+func IsUUIDSupportedNode(node *v1.Node) (bool, error) {
+	newVersion, err := version.ParseSemantic("v1.9.4")
+	if err != nil {
+		glog.Errorf("Failed to determine whether node %+v is old with error %v", node, err)
+		return false, err
+	}
+	nodeVersion, err := version.ParseSemantic(node.Status.NodeInfo.KubeletVersion)
+	if err != nil {
+		glog.Errorf("Failed to determine whether node %+v is old with error %v", node, err)
+		return false, err
+	}
+	if nodeVersion.LessThan(newVersion) {
+		return true, nil
+	}
+	return false, nil
+}
+
+func GetNodeUUID(node *v1.Node) (string, error) {
+	oldNode, err := IsUUIDSupportedNode(node)
+	if err != nil {
+		glog.Errorf("Failed to get node UUID for node %+v with error %v", node, err)
+		return "", err
+	}
+	if oldNode {
+		return node.Status.NodeInfo.SystemUUID, nil
+	}
+	return GetUUIDFromProviderID(node.Spec.ProviderID), nil
 }

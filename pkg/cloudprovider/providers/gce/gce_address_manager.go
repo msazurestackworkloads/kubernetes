@@ -23,6 +23,7 @@ import (
 	compute "google.golang.org/api/compute/v1"
 
 	"github.com/golang/glog"
+	"k8s.io/kubernetes/pkg/cloudprovider/providers/gce/cloud"
 )
 
 type addressManager struct {
@@ -31,13 +32,13 @@ type addressManager struct {
 	name        string
 	serviceName string
 	targetIP    string
-	addressType lbScheme
+	addressType cloud.LbScheme
 	region      string
 	subnetURL   string
 	tryRelease  bool
 }
 
-func newAddressManager(svc CloudAddressService, serviceName, region, subnetURL, name, targetIP string, addressType lbScheme) *addressManager {
+func newAddressManager(svc CloudAddressService, serviceName, region, subnetURL, name, targetIP string, addressType cloud.LbScheme) *addressManager {
 	return &addressManager{
 		svc:         svc,
 		logPrefix:   fmt.Sprintf("AddressManager(%q)", name),
@@ -168,7 +169,7 @@ func (am *addressManager) ensureAddressReservation() (string, error) {
 	if am.isManagedAddress(addr) {
 		// The address with this name is checked at the beginning of 'HoldAddress()', but for some reason
 		// it was re-created by this point. May be possible that two controllers are running.
-		glog.Warning("%v: address %q unexpectedly existed with IP %q.", am.logPrefix, addr.Name, am.targetIP)
+		glog.Warningf("%v: address %q unexpectedly existed with IP %q.", am.logPrefix, addr.Name, am.targetIP)
 	} else {
 		// If the retrieved address is not named with the loadbalancer name, then the controller does not own it, but will allow use of it.
 		glog.V(4).Infof("%v: address %q was already reserved with name: %q, description: %q", am.logPrefix, am.targetIP, addr.Name, addr.Description)

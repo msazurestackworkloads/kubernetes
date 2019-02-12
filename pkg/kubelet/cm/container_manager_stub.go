@@ -20,13 +20,15 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	internalapi "k8s.io/kubernetes/pkg/kubelet/apis/cri"
 	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager"
 	"k8s.io/kubernetes/pkg/kubelet/config"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
 	"k8s.io/kubernetes/pkg/kubelet/status"
-	"k8s.io/kubernetes/pkg/scheduler/schedulercache"
+	"k8s.io/kubernetes/pkg/kubelet/util/pluginwatcher"
+	schedulercache "k8s.io/kubernetes/pkg/scheduler/cache"
 )
 
 type containerManagerStub struct{}
@@ -67,6 +69,15 @@ func (cm *containerManagerStub) GetNodeAllocatableReservation() v1.ResourceList 
 }
 
 func (cm *containerManagerStub) GetCapacity() v1.ResourceList {
+	c := v1.ResourceList{
+		v1.ResourceEphemeralStorage: *resource.NewQuantity(
+			int64(0),
+			resource.BinarySI),
+	}
+	return c
+}
+
+func (cm *containerManagerStub) GetPluginRegistrationHandler() pluginwatcher.PluginHandler {
 	return nil
 }
 
@@ -88,6 +99,10 @@ func (cm *containerManagerStub) UpdatePluginResources(*schedulercache.NodeInfo, 
 
 func (cm *containerManagerStub) InternalContainerLifecycle() InternalContainerLifecycle {
 	return &internalContainerLifecycleImpl{cpumanager.NewFakeManager()}
+}
+
+func (cm *containerManagerStub) GetPodCgroupRoot() string {
+	return ""
 }
 
 func NewStubContainerManager() ContainerManager {

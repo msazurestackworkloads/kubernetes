@@ -22,8 +22,9 @@ import (
 	"log"
 	"net/http"
 	"net/http/cookiejar"
-	"runtime"
 	"time"
+
+	"github.com/Azure/go-autorest/version"
 )
 
 const (
@@ -35,18 +36,12 @@ const (
 
 	// DefaultRetryAttempts is number of attempts for retry status codes (5xx).
 	DefaultRetryAttempts = 3
+
+	// DefaultRetryDuration is the duration to wait between retries.
+	DefaultRetryDuration = 30 * time.Second
 )
 
 var (
-	// defaultUserAgent builds a string containing the Go version, system archityecture and OS,
-	// and the go-autorest version.
-	defaultUserAgent = fmt.Sprintf("Go/%s (%s-%s) go-autorest/%s",
-		runtime.Version(),
-		runtime.GOARCH,
-		runtime.GOOS,
-		Version(),
-	)
-
 	// StatusCodesForRetry are a defined group of status code for which the client will retry
 	StatusCodesForRetry = []int{
 		http.StatusRequestTimeout,      // 408
@@ -163,6 +158,9 @@ type Client struct {
 	UserAgent string
 
 	Jar http.CookieJar
+
+	// Set to true to skip attempted registration of resource providers (false by default).
+	SkipResourceProviderRegistration bool
 }
 
 // NewClientWithUserAgent returns an instance of a Client with the UserAgent set to the passed
@@ -172,9 +170,10 @@ func NewClientWithUserAgent(ua string) Client {
 		PollingDelay:    DefaultPollingDelay,
 		PollingDuration: DefaultPollingDuration,
 		RetryAttempts:   DefaultRetryAttempts,
-		RetryDuration:   30 * time.Second,
-		UserAgent:       defaultUserAgent,
+		RetryDuration:   DefaultRetryDuration,
+		UserAgent:       version.UserAgent(),
 	}
+	c.Sender = c.sender()
 	c.AddToUserAgent(ua)
 	return c
 }
@@ -196,15 +195,22 @@ func (c Client) Do(r *http.Request) (*http.Response, error) {
 		r, _ = Prepare(r,
 			WithUserAgent(c.UserAgent))
 	}
+	// NOTE: c.WithInspection() must be last in the list so that it can inspect all preceding operations
 	r, err := Prepare(r,
-		c.WithInspection(),
-		c.WithAuthorization())
+		c.WithAuthorization(),
+		c.WithInspection())
 	if err != nil {
-		return nil, NewErrorWithError(err, "autorest/Client", "Do", nil, "Preparing request failed")
+		var resp *http.Response
+		if detErr, ok := err.(DetailedError); ok {
+			// if the authorization failed (e.g. invalid credentials) there will
+			// be a response associated with the error, be sure to return it.
+			resp = detErr.Response
+		}
+		return resp, NewErrorWithError(err, "autorest/Client", "Do", nil, "Preparing request failed")
 	}
+
 	resp, err := SendWithSender(c.sender(), r)
-	Respond(resp,
-		c.ByInspecting())
+	Respond(resp, c.ByInspecting())
 	return resp, err
 }
 

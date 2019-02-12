@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,17 +34,20 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	utilfeaturetesting "k8s.io/apiserver/pkg/util/feature/testing"
+	versionedinformers "k8s.io/client-go/informers"
+	externalclientset "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
+	"k8s.io/kubernetes/pkg/apis/coordination"
 	api "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/apis/policy"
 	"k8s.io/kubernetes/pkg/auth/nodeidentifier"
 	clientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
-	informers "k8s.io/kubernetes/pkg/client/informers/informers_generated/internalversion"
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/kubeapiserver/authorizer"
 	"k8s.io/kubernetes/plugin/pkg/admission/noderestriction"
 	"k8s.io/kubernetes/test/integration/framework"
+	"k8s.io/utils/pointer"
 )
 
 func TestNodeAuthorizer(t *testing.T) {
@@ -71,13 +75,22 @@ func TestNodeAuthorizer(t *testing.T) {
 
 	// Build client config, clientset, and informers
 	clientConfig := &restclient.Config{Host: apiServer.URL, ContentConfig: restclient.ContentConfig{NegotiatedSerializer: legacyscheme.Codecs}}
-	superuserClient := clientsetForToken(tokenMaster, clientConfig)
-	informerFactory := informers.NewSharedInformerFactory(superuserClient, time.Minute)
+	superuserClient, superuserClientExternal := clientsetForToken(tokenMaster, clientConfig)
+	versionedInformerFactory := versionedinformers.NewSharedInformerFactory(superuserClientExternal, time.Minute)
+
+	// Enabled CSIPersistentVolume feature at startup so volumeattachments get watched
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.CSIPersistentVolume, true)()
+
+	// Enable DynamicKubeletConfig feature so that Node.Spec.ConfigSource can be set
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.DynamicKubeletConfig, true)()
+
+	// Enable NodeLease feature so that nodes can create leases
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.NodeLease, true)()
 
 	// Set up Node+RBAC authorizer
 	authorizerConfig := &authorizer.AuthorizationConfig{
-		AuthorizationModes: []string{"Node", "RBAC"},
-		InformerFactory:    informerFactory,
+		AuthorizationModes:       []string{"Node", "RBAC"},
+		VersionedInformerFactory: versionedInformerFactory,
 	}
 	nodeRBACAuthorizer, _, err := authorizerConfig.New()
 	if err != nil {
@@ -86,24 +99,24 @@ func TestNodeAuthorizer(t *testing.T) {
 
 	// Set up NodeRestriction admission
 	nodeRestrictionAdmission := noderestriction.NewPlugin(nodeidentifier.NewDefaultNodeIdentifier())
-	nodeRestrictionAdmission.SetInternalKubeClientSet(superuserClient)
+	nodeRestrictionAdmission.SetExternalKubeInformerFactory(versionedInformerFactory)
 	if err := nodeRestrictionAdmission.ValidateInitialization(); err != nil {
 		t.Fatal(err)
 	}
 
 	// Start the server
 	masterConfig := framework.NewIntegrationTestMasterConfig()
-	masterConfig.GenericConfig.Authenticator = authenticator
-
-	masterConfig.GenericConfig.Authorizer = nodeRBACAuthorizer
+	masterConfig.GenericConfig.Authentication.Authenticator = authenticator
+	masterConfig.GenericConfig.Authorization.Authorizer = nodeRBACAuthorizer
 	masterConfig.GenericConfig.AdmissionControl = nodeRestrictionAdmission
+
 	_, _, closeFn := framework.RunAMasterUsingServer(masterConfig, apiServer, h)
 	defer closeFn()
 
 	// Start the informers
 	stopCh := make(chan struct{})
 	defer close(stopCh)
-	informerFactory.Start(stopCh)
+	versionedInformerFactory.Start(stopCh)
 
 	// Wait for a healthy server
 	for {
@@ -124,6 +137,20 @@ func TestNodeAuthorizer(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := superuserClient.Core().ConfigMaps("ns").Create(&api.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "myconfigmap"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := superuserClient.Core().ConfigMaps("ns").Create(&api.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "myconfigmapconfigsource"}}); err != nil {
+		t.Fatal(err)
+	}
+	pvName := "mypv"
+	if _, err := superuserClientExternal.StorageV1beta1().VolumeAttachments().Create(&storagev1beta1.VolumeAttachment{
+		ObjectMeta: metav1.ObjectMeta{Name: "myattachment"},
+		Spec: storagev1beta1.VolumeAttachmentSpec{
+			Attacher: "foo",
+			Source:   storagev1beta1.VolumeAttachmentSource{PersistentVolumeName: &pvName},
+			NodeName: "node2",
+		},
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := superuserClient.Core().PersistentVolumeClaims("ns").Create(&api.PersistentVolumeClaim{
@@ -166,6 +193,12 @@ func TestNodeAuthorizer(t *testing.T) {
 			return err
 		}
 	}
+	getConfigMapConfigSource := func(client clientset.Interface) func() error {
+		return func() error {
+			_, err := client.Core().ConfigMaps("ns").Get("myconfigmapconfigsource", metav1.GetOptions{})
+			return err
+		}
+	}
 	getPVC := func(client clientset.Interface) func() error {
 		return func() error {
 			_, err := client.Core().PersistentVolumeClaims("ns").Get("mypvc", metav1.GetOptions{})
@@ -175,6 +208,12 @@ func TestNodeAuthorizer(t *testing.T) {
 	getPV := func(client clientset.Interface) func() error {
 		return func() error {
 			_, err := client.Core().PersistentVolumes().Get("mypv", metav1.GetOptions{})
+			return err
+		}
+	}
+	getVolumeAttachment := func(client externalclientset.Interface) func() error {
+		return func() error {
+			_, err := client.StorageV1beta1().VolumeAttachments().Get("myattachment", metav1.GetOptions{})
 			return err
 		}
 	}
@@ -241,6 +280,34 @@ func TestNodeAuthorizer(t *testing.T) {
 			return err
 		}
 	}
+	setNode2ConfigSource := func(client clientset.Interface) func() error {
+		return func() error {
+			node2, err := client.Core().Nodes().Get("node2", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			node2.Spec.ConfigSource = &api.NodeConfigSource{
+				ConfigMap: &api.ConfigMapNodeConfigSource{
+					Namespace:        "ns",
+					Name:             "myconfigmapconfigsource",
+					KubeletConfigKey: "kubelet",
+				},
+			}
+			_, err = client.Core().Nodes().Update(node2)
+			return err
+		}
+	}
+	unsetNode2ConfigSource := func(client clientset.Interface) func() error {
+		return func() error {
+			node2, err := client.Core().Nodes().Get("node2", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			node2.Spec.ConfigSource = nil
+			_, err = client.Core().Nodes().Update(node2)
+			return err
+		}
+	}
 	updateNode2Status := func(client clientset.Interface) func() error {
 		return func() error {
 			_, err := client.Core().Nodes().UpdateStatus(&api.Node{
@@ -303,9 +370,57 @@ func TestNodeAuthorizer(t *testing.T) {
 		}
 	}
 
-	nodeanonClient := clientsetForToken(tokenNodeUnknown, clientConfig)
-	node1Client := clientsetForToken(tokenNode1, clientConfig)
-	node2Client := clientsetForToken(tokenNode2, clientConfig)
+	getNode1Lease := func(client clientset.Interface) func() error {
+		return func() error {
+			_, err := client.Coordination().Leases(api.NamespaceNodeLease).Get("node1", metav1.GetOptions{})
+			return err
+		}
+	}
+	node1LeaseDurationSeconds := int32(40)
+	createNode1Lease := func(client clientset.Interface) func() error {
+		return func() error {
+			lease := &coordination.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node1",
+				},
+				Spec: coordination.LeaseSpec{
+					HolderIdentity:       pointer.StringPtr("node1"),
+					LeaseDurationSeconds: pointer.Int32Ptr(node1LeaseDurationSeconds),
+					RenewTime:            &metav1.MicroTime{Time: time.Now()},
+				},
+			}
+			_, err := client.Coordination().Leases(api.NamespaceNodeLease).Create(lease)
+			return err
+		}
+	}
+	updateNode1Lease := func(client clientset.Interface) func() error {
+		return func() error {
+			lease, err := client.Coordination().Leases(api.NamespaceNodeLease).Get("node1", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			lease.Spec.RenewTime = &metav1.MicroTime{Time: time.Now()}
+			_, err = client.Coordination().Leases(api.NamespaceNodeLease).Update(lease)
+			return err
+		}
+	}
+	patchNode1Lease := func(client clientset.Interface) func() error {
+		return func() error {
+			node1LeaseDurationSeconds++
+			bs := []byte(fmt.Sprintf(`{"spec": {"leaseDurationSeconds": %d}}`, node1LeaseDurationSeconds))
+			_, err := client.Coordination().Leases(api.NamespaceNodeLease).Patch("node1", types.StrategicMergePatchType, bs)
+			return err
+		}
+	}
+	deleteNode1Lease := func(client clientset.Interface) func() error {
+		return func() error {
+			return client.Coordination().Leases(api.NamespaceNodeLease).Delete("node1", &metav1.DeleteOptions{})
+		}
+	}
+
+	nodeanonClient, _ := clientsetForToken(tokenNodeUnknown, clientConfig)
+	node1Client, node1ClientExternal := clientsetForToken(tokenNode1, clientConfig)
+	node2Client, node2ClientExternal := clientsetForToken(tokenNode2, clientConfig)
 
 	// all node requests from node1 and unknown node fail
 	expectForbidden(t, getSecret(nodeanonClient))
@@ -394,6 +509,7 @@ func TestNodeAuthorizer(t *testing.T) {
 	expectAllowed(t, deleteNode2NormalPod(node2Client))
 	expectAllowed(t, createNode2MirrorPod(node2Client))
 	expectAllowed(t, deleteNode2MirrorPod(node2Client))
+
 	// recreate as an admin to test eviction
 	expectAllowed(t, createNode2NormalPod(superuserClient))
 	expectAllowed(t, createNode2MirrorPod(superuserClient))
@@ -402,32 +518,76 @@ func TestNodeAuthorizer(t *testing.T) {
 
 	// re-create a pod as an admin to add object references
 	expectAllowed(t, createNode2NormalPod(superuserClient))
-	// With ExpandPersistentVolumes feature disabled
+
+	// ExpandPersistentVolumes feature disabled
 	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.ExpandPersistentVolumes, false)()
-	// node->pvc relationship not established
 	expectForbidden(t, updatePVCCapacity(node1Client))
-	// node->pvc relationship established but feature is disabled
 	expectForbidden(t, updatePVCCapacity(node2Client))
 
-	//Enabled ExpandPersistentVolumes feature
+	// ExpandPersistentVolumes feature enabled
 	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.ExpandPersistentVolumes, true)()
-	// Node->pvc relationship not established
 	expectForbidden(t, updatePVCCapacity(node1Client))
-	// node->pvc relationship established and feature is enabled
 	expectAllowed(t, updatePVCCapacity(node2Client))
-	// node->pvc relationship established but updating phase
 	expectForbidden(t, updatePVCPhase(node2Client))
+
+	// Disabled CSIPersistentVolume feature
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.CSIPersistentVolume, false)()
+	expectForbidden(t, getVolumeAttachment(node1ClientExternal))
+	expectForbidden(t, getVolumeAttachment(node2ClientExternal))
+	// Enabled CSIPersistentVolume feature
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.CSIPersistentVolume, true)()
+	expectForbidden(t, getVolumeAttachment(node1ClientExternal))
+	expectAllowed(t, getVolumeAttachment(node2ClientExternal))
+
+	// create node2 again
+	expectAllowed(t, createNode2(node2Client))
+	// node2 can not set its own config source
+	expectForbidden(t, setNode2ConfigSource(node2Client))
+	// node2 can not access the configmap config source yet
+	expectForbidden(t, getConfigMapConfigSource(node2Client))
+	// superuser can access the configmap config source
+	expectAllowed(t, getConfigMapConfigSource(superuserClient))
+	// superuser can set node2's config source
+	expectAllowed(t, setNode2ConfigSource(superuserClient))
+	// node2 can now get the configmap assigned as its config source
+	expectAllowed(t, getConfigMapConfigSource(node2Client))
+	// superuser can unset node2's config source
+	expectAllowed(t, unsetNode2ConfigSource(superuserClient))
+	// node2 can no longer get the configmap after it is unassigned as its config source
+	expectForbidden(t, getConfigMapConfigSource(node2Client))
+	// clean up node2
+	expectAllowed(t, deleteNode2(node2Client))
+
+	//TODO(mikedanese): integration test node restriction of TokenRequest
+
+	// node1 allowed to operate on its own lease
+	expectAllowed(t, createNode1Lease(node1Client))
+	expectAllowed(t, getNode1Lease(node1Client))
+	expectAllowed(t, updateNode1Lease(node1Client))
+	expectAllowed(t, patchNode1Lease(node1Client))
+	expectAllowed(t, deleteNode1Lease(node1Client))
+	// node2 not allowed to operate on another node's lease
+	expectForbidden(t, createNode1Lease(node2Client))
+	expectForbidden(t, getNode1Lease(node2Client))
+	expectForbidden(t, updateNode1Lease(node2Client))
+	expectForbidden(t, patchNode1Lease(node2Client))
+	expectForbidden(t, deleteNode1Lease(node2Client))
+
+	// TODO (verult) CSINodeInfo tests (issue #68254)
 }
 
 // expect executes a function a set number of times until it either returns the
 // expected error or executes too many times. It returns if the retries timed
 // out and the last error returned by the method.
-func expect(f func() error, wantErr func(error) bool) (timeout bool, lastErr error) {
+func expect(t *testing.T, f func() error, wantErr func(error) bool) (timeout bool, lastErr error) {
+	t.Helper()
 	err := wait.PollImmediate(time.Second, 30*time.Second, func() (bool, error) {
+		t.Helper()
 		lastErr = f()
 		if wantErr(lastErr) {
 			return true, nil
 		}
+		t.Logf("unexpected response, will retry: %v", lastErr)
 		return false, nil
 	})
 	return err == nil, lastErr
@@ -435,21 +595,21 @@ func expect(f func() error, wantErr func(error) bool) (timeout bool, lastErr err
 
 func expectForbidden(t *testing.T, f func() error) {
 	t.Helper()
-	if ok, err := expect(f, errors.IsForbidden); !ok {
+	if ok, err := expect(t, f, errors.IsForbidden); !ok {
 		t.Errorf("Expected forbidden error, got %v", err)
 	}
 }
 
 func expectNotFound(t *testing.T, f func() error) {
 	t.Helper()
-	if ok, err := expect(f, errors.IsNotFound); !ok {
+	if ok, err := expect(t, f, errors.IsNotFound); !ok {
 		t.Errorf("Expected notfound error, got %v", err)
 	}
 }
 
 func expectAllowed(t *testing.T, f func() error) {
 	t.Helper()
-	if ok, err := expect(f, func(e error) bool { return e == nil }); !ok {
+	if ok, err := expect(t, f, func(e error) bool { return e == nil }); !ok {
 		t.Errorf("Expected no error, got %v", err)
 	}
 }

@@ -17,6 +17,7 @@ go_library(
         "util.go",
         "watch.go",
     ],
+    importmap = "k8s.io/kubernetes/vendor/github.com/coreos/etcd/etcdserver/api/v3rpc",
     importpath = "github.com/coreos/etcd/etcdserver/api/v3rpc",
     visibility = ["//visibility:public"],
     deps = [
@@ -43,6 +44,7 @@ go_library(
         "//vendor/google.golang.org/grpc/credentials:go_default_library",
         "//vendor/google.golang.org/grpc/grpclog:go_default_library",
         "//vendor/google.golang.org/grpc/metadata:go_default_library",
+        "//vendor/google.golang.org/grpc/status:go_default_library",
     ],
 )
 

@@ -68,7 +68,7 @@ const (
 	// AffinityTypeClientIPProto - affinity based on Client IP and port.
 	gceAffinityTypeClientIPProto = "CLIENT_IP_PROTO"
 
-	operationPollInterval = 3 * time.Second
+	operationPollInterval = time.Second
 	// Creating Route in very large clusters, may take more than half an hour.
 	operationPollTimeoutDuration = time.Hour
 
@@ -80,16 +80,16 @@ const (
 	maxTargetPoolCreateInstances = 200
 
 	// HTTP Load Balancer parameters
-	// Configure 2 second period for external health checks.
-	gceHcCheckIntervalSeconds = int64(2)
+	// Configure 8 second period for external health checks.
+	gceHcCheckIntervalSeconds = int64(8)
 	gceHcTimeoutSeconds       = int64(1)
 	// Start sending requests as soon as a pod is found on the node.
 	gceHcHealthyThreshold = int64(1)
-	// Defaults to 5 * 2 = 10 seconds before the LB will steer traffic away
-	gceHcUnhealthyThreshold = int64(5)
+	// Defaults to 3 * 8 = 24 seconds before the LB will steer traffic away.
+	gceHcUnhealthyThreshold = int64(3)
 
-	gceComputeAPIEndpoint      = "https://www.googleapis.com/compute/v1/"
-	gceComputeAPIEndpointAlpha = "https://www.googleapis.com/compute/alpha/"
+	gceComputeAPIEndpoint     = "https://www.googleapis.com/compute/v1/"
+	gceComputeAPIEndpointBeta = "https://www.googleapis.com/compute/beta/"
 )
 
 // gceObject is an abstraction of all GCE API object in go client
@@ -107,12 +107,14 @@ type GCECloud struct {
 	serviceBeta      *computebeta.Service
 	serviceAlpha     *computealpha.Service
 	containerService *container.Service
+	tpuService       *tpuService
 	client           clientset.Interface
 	clientBuilder    controller.ControllerClientBuilder
 	eventBroadcaster record.EventBroadcaster
 	eventRecorder    record.EventRecorder
 	projectID        string
 	region           string
+	regional         bool
 	localZone        string // The zone in which we are running
 	// managedZones will be set to the 1 zone if running a single zone cluster
 	// it will be set to ALL zones in region for any multi-zone cluster
@@ -151,6 +153,9 @@ type GCECloud struct {
 
 	// New code generated interface to the GCE compute library.
 	c cloud.Cloud
+
+	// Keep a reference of this around so we can inject a new cloud.RateLimiter implementation.
+	s *cloud.Service
 }
 
 // TODO: replace gcfg with json
@@ -170,10 +175,14 @@ type ConfigGlobal struct {
 	SecondaryRangeName string   `gcfg:"secondary-range-name"`
 	NodeTags           []string `gcfg:"node-tags"`
 	NodeInstancePrefix string   `gcfg:"node-instance-prefix"`
+	Regional           bool     `gcfg:"regional"`
 	Multizone          bool     `gcfg:"multizone"`
 	// ApiEndpoint is the GCE compute API endpoint to use. If this is blank,
 	// then the default endpoint is used.
 	ApiEndpoint string `gcfg:"api-endpoint"`
+	// ContainerApiEndpoint is the GCE container API endpoint to use. If this is blank,
+	// then the default endpoint is used.
+	ContainerApiEndpoint string `gcfg:"container-api-endpoint"`
 	// LocalZone specifies the GCE zone that gce cloud client instance is
 	// located in (i.e. where the controller will be running). If this is
 	// blank, then the local zone will be discovered via the metadata server.
@@ -190,22 +199,24 @@ type ConfigFile struct {
 
 // CloudConfig includes all the necessary configuration for creating GCECloud
 type CloudConfig struct {
-	ApiEndpoint        string
-	ProjectID          string
-	NetworkProjectID   string
-	Region             string
-	Zone               string
-	ManagedZones       []string
-	NetworkName        string
-	NetworkURL         string
-	SubnetworkName     string
-	SubnetworkURL      string
-	SecondaryRangeName string
-	NodeTags           []string
-	NodeInstancePrefix string
-	TokenSource        oauth2.TokenSource
-	UseMetadataServer  bool
-	AlphaFeatureGate   *AlphaFeatureGate
+	ApiEndpoint          string
+	ContainerApiEndpoint string
+	ProjectID            string
+	NetworkProjectID     string
+	Region               string
+	Regional             bool
+	Zone                 string
+	ManagedZones         []string
+	NetworkName          string
+	NetworkURL           string
+	SubnetworkName       string
+	SubnetworkURL        string
+	SecondaryRangeName   string
+	NodeTags             []string
+	NodeInstancePrefix   string
+	TokenSource          oauth2.TokenSource
+	UseMetadataServer    bool
+	AlphaFeatureGate     *AlphaFeatureGate
 }
 
 func init() {
@@ -227,6 +238,16 @@ type Services struct {
 // ComputeServices returns access to the internal compute services.
 func (g *GCECloud) ComputeServices() *Services {
 	return &Services{g.service, g.serviceAlpha, g.serviceBeta}
+}
+
+// Compute returns the generated stubs for the compute API.
+func (g *GCECloud) Compute() cloud.Cloud {
+	return g.c
+}
+
+// ContainerService returns the container service.
+func (g *GCECloud) ContainerService() *container.Service {
+	return g.containerService
 }
 
 // newGCECloud creates a new instance of GCECloud.
@@ -263,12 +284,14 @@ func generateCloudConfig(configFile *ConfigFile) (cloudConfig *CloudConfig, err 
 	// By default, fetch token from GCE metadata server
 	cloudConfig.TokenSource = google.ComputeTokenSource("")
 	cloudConfig.UseMetadataServer = true
-
-	featureMap := make(map[string]bool)
-	cloudConfig.AlphaFeatureGate = &AlphaFeatureGate{featureMap}
+	cloudConfig.AlphaFeatureGate = NewAlphaFeatureGate([]string{})
 	if configFile != nil {
 		if configFile.Global.ApiEndpoint != "" {
 			cloudConfig.ApiEndpoint = configFile.Global.ApiEndpoint
+		}
+
+		if configFile.Global.ContainerApiEndpoint != "" {
+			cloudConfig.ContainerApiEndpoint = configFile.Global.ContainerApiEndpoint
 		}
 
 		if configFile.Global.TokenURL != "" {
@@ -283,19 +306,7 @@ func generateCloudConfig(configFile *ConfigFile) (cloudConfig *CloudConfig, err 
 
 		cloudConfig.NodeTags = configFile.Global.NodeTags
 		cloudConfig.NodeInstancePrefix = configFile.Global.NodeInstancePrefix
-
-		alphaFeatureGate, err := NewAlphaFeatureGate(configFile.Global.AlphaFeatures)
-		if err != nil {
-			glog.Errorf("Encountered error for creating alpha feature gate: %v", err)
-		}
-		cloudConfig.AlphaFeatureGate = alphaFeatureGate
-	} else {
-		// initialize AlphaFeatureGate when no AlphaFeatures are configured.
-		alphaFeatureGate, err := NewAlphaFeatureGate([]string{})
-		if err != nil {
-			glog.Errorf("Encountered error for initializing alpha feature gate: %v", err)
-		}
-		cloudConfig.AlphaFeatureGate = alphaFeatureGate
+		cloudConfig.AlphaFeatureGate = NewAlphaFeatureGate(configFile.Global.AlphaFeatures)
 	}
 
 	// retrieve projectID and zone
@@ -324,9 +335,14 @@ func generateCloudConfig(configFile *ConfigFile) (cloudConfig *CloudConfig, err 
 		return nil, err
 	}
 
+	// Determine if its a regional cluster
+	if configFile != nil && configFile.Global.Regional {
+		cloudConfig.Regional = true
+	}
+
 	// generate managedZones
 	cloudConfig.ManagedZones = []string{cloudConfig.Zone}
-	if configFile != nil && configFile.Global.Multizone {
+	if configFile != nil && (configFile.Global.Multizone || configFile.Global.Regional) {
 		cloudConfig.ManagedZones = nil // Use all zones in region
 	}
 
@@ -424,6 +440,14 @@ func CreateGCECloud(config *CloudConfig) (*GCECloud, error) {
 		return nil, err
 	}
 	containerService.UserAgent = userAgent
+	if config.ContainerApiEndpoint != "" {
+		containerService.BasePath = config.ContainerApiEndpoint
+	}
+
+	tpuService, err := newTPUService(client)
+	if err != nil {
+		return nil, err
+	}
 
 	// ProjectID and.NetworkProjectID may be project number or name.
 	projID, netProjID := tryConvertToProjectNames(config.ProjectID, config.NetworkProjectID, service)
@@ -484,17 +508,19 @@ func CreateGCECloud(config *CloudConfig) (*GCECloud, error) {
 		glog.Infof("managing multiple zones: %v", config.ManagedZones)
 	}
 
-	operationPollRateLimiter := flowcontrol.NewTokenBucketRateLimiter(10, 100) // 10 qps, 100 bucket size.
+	operationPollRateLimiter := flowcontrol.NewTokenBucketRateLimiter(5, 5) // 5 qps, 5 burst.
 
 	gce := &GCECloud{
 		service:                  service,
 		serviceAlpha:             serviceAlpha,
 		serviceBeta:              serviceBeta,
 		containerService:         containerService,
+		tpuService:               tpuService,
 		projectID:                projID,
 		networkProjectID:         netProjID,
 		onXPN:                    onXPN,
 		region:                   config.Region,
+		regional:                 config.Regional,
 		localZone:                config.Zone,
 		managedZones:             config.ManagedZones,
 		networkURL:               networkURL,
@@ -510,15 +536,25 @@ func CreateGCECloud(config *CloudConfig) (*GCECloud, error) {
 	}
 
 	gce.manager = &gceServiceManager{gce}
-	gce.c = cloud.NewGCE(&cloud.Service{
+	gce.s = &cloud.Service{
 		GA:            service,
 		Alpha:         serviceAlpha,
 		Beta:          serviceBeta,
 		ProjectRouter: &gceProjectRouter{gce},
 		RateLimiter:   &gceRateLimiter{gce},
-	})
+	}
+	gce.c = cloud.NewGCE(gce.s)
 
 	return gce, nil
+}
+
+// SetRateLimiter adds a custom cloud.RateLimiter implementation.
+// WARNING: Calling this could have unexpected behavior if you have in-flight
+// requests. It is best to use this immediately after creating a GCECloud.
+func (g *GCECloud) SetRateLimiter(rl cloud.RateLimiter) {
+	if rl != nil {
+		g.s.RateLimiter = rl
+	}
 }
 
 // determineSubnetURL queries for all subnetworks in a region for a given network and returns
@@ -580,7 +616,7 @@ func (gce *GCECloud) Initialize(clientBuilder controller.ControllerClientBuilder
 
 	if gce.OnXPN() {
 		gce.eventBroadcaster = record.NewBroadcaster()
-		gce.eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: v1core.New(gce.client.CoreV1().RESTClient()).Events("")})
+		gce.eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: gce.client.CoreV1().Events("")})
 		gce.eventRecorder = gce.eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "gce-cloudprovider"})
 	}
 
@@ -838,7 +874,13 @@ func newOauthClient(tokenSource oauth2.TokenSource) (*http.Client, error) {
 		glog.Infof("Using existing Token Source %#v", tokenSource)
 	}
 
-	if err := wait.PollImmediate(5*time.Second, 30*time.Second, func() (bool, error) {
+	backoff := wait.Backoff{
+		// These values will add up to about a minute. See #56293 for background.
+		Duration: time.Second,
+		Factor:   1.4,
+		Steps:    10,
+	}
+	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
 		if _, err := tokenSource.Token(); err != nil {
 			glog.Errorf("error fetching initial token: %v", err)
 			return false, nil
@@ -860,10 +902,10 @@ func (manager *gceServiceManager) getProjectsAPIEndpoint() string {
 	return projectsApiEndpoint
 }
 
-func (manager *gceServiceManager) getProjectsAPIEndpointAlpha() string {
-	projectsApiEndpoint := gceComputeAPIEndpointAlpha + "projects/"
+func (manager *gceServiceManager) getProjectsAPIEndpointBeta() string {
+	projectsApiEndpoint := gceComputeAPIEndpointBeta + "projects/"
 	if manager.gce.service != nil {
-		projectsApiEndpoint = manager.gce.serviceAlpha.BasePath
+		projectsApiEndpoint = manager.gce.serviceBeta.BasePath
 	}
 
 	return projectsApiEndpoint

@@ -19,6 +19,8 @@ package flag
 import (
 	"crypto/tls"
 	"fmt"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // ciphers maps strings into tls package cipher constants in
@@ -48,6 +50,14 @@ var ciphers = map[string]uint16{
 	"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305":  tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 }
 
+func TLSCipherPossibleValues() []string {
+	cipherKeys := sets.NewString()
+	for key := range ciphers {
+		cipherKeys.Insert(key)
+	}
+	return cipherKeys.List()
+}
+
 func TLSCipherSuites(cipherNames []string) ([]uint16, error) {
 	if len(cipherNames) == 0 {
 		return nil, nil
@@ -61,4 +71,35 @@ func TLSCipherSuites(cipherNames []string) ([]uint16, error) {
 		ciphersIntSlice = append(ciphersIntSlice, intValue)
 	}
 	return ciphersIntSlice, nil
+}
+
+var versions = map[string]uint16{
+	"VersionTLS10": tls.VersionTLS10,
+	"VersionTLS11": tls.VersionTLS11,
+	"VersionTLS12": tls.VersionTLS12,
+}
+
+func TLSPossibleVersions() []string {
+	versionsKeys := sets.NewString()
+	for key := range versions {
+		versionsKeys.Insert(key)
+	}
+	return versionsKeys.List()
+}
+
+func TLSVersion(versionName string) (uint16, error) {
+	if len(versionName) == 0 {
+		return DefaultTLSVersion(), nil
+	}
+	if version, ok := versions[versionName]; ok {
+		return version, nil
+	}
+	return 0, fmt.Errorf("unknown tls version %q", versionName)
+}
+
+func DefaultTLSVersion() uint16 {
+	// Can't use SSLv3 because of POODLE and BEAST
+	// Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+	// Can't use TLSv1.1 because of RC4 cipher usage
+	return tls.VersionTLS12
 }

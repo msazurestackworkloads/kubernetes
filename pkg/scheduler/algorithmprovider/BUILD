@@ -17,10 +17,9 @@ go_test(
     name = "go_default_test",
     srcs = ["plugins_test.go"],
     embed = [":go_default_library"],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/algorithmprovider",
     deps = [
         "//pkg/scheduler/factory:go_default_library",
-        "//vendor/k8s.io/apiserver/pkg/util/feature:go_default_library",
+        "//staging/src/k8s.io/apiserver/pkg/util/feature:go_default_library",
     ],
 )
 

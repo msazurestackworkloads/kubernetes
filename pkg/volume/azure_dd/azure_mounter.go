@@ -44,7 +44,7 @@ var _ volume.Mounter = &azureDiskMounter{}
 
 func (m *azureDiskMounter) GetAttributes() volume.Attributes {
 	readOnly := false
-	volumeSource, err := getVolumeSource(m.spec)
+	volumeSource, _, err := getVolumeSource(m.spec)
 	if err != nil {
 		glog.Infof("azureDisk - mounter failed to get volume source for spec %s %v", m.spec.Name(), err)
 	} else if volumeSource.ReadOnly != nil {
@@ -71,7 +71,7 @@ func (m *azureDiskMounter) GetPath() string {
 
 func (m *azureDiskMounter) SetUpAt(dir string, fsGroup *int64) error {
 	mounter := m.plugin.host.GetMounter(m.plugin.GetPluginName())
-	volumeSource, err := getVolumeSource(m.spec)
+	volumeSource, _, err := getVolumeSource(m.spec)
 
 	if err != nil {
 		glog.Infof("azureDisk - mounter failed to get volume source for spec %s", m.spec.Name())
@@ -116,7 +116,7 @@ func (m *azureDiskMounter) SetUpAt(dir string, fsGroup *int64) error {
 	}
 
 	if m.options.MountOptions != nil {
-		options = volume.JoinMountOptions(m.options.MountOptions, options)
+		options = util.JoinMountOptions(m.options.MountOptions, options)
 	}
 
 	glog.V(4).Infof("azureDisk - Attempting to mount %s on %s", diskName, dir)
@@ -155,7 +155,7 @@ func (m *azureDiskMounter) SetUpAt(dir string, fsGroup *int64) error {
 			return fmt.Errorf("azureDisk - SetupAt:Mount:Failure error cleaning up (removing dir:%s) with error:%v original-mountErr:%v", dir, err, mountErr)
 		}
 
-		glog.V(2).Infof("azureDisk - Mount of disk:%s on dir:%s failed with mount error:%v post failure clean up was completed", diskName, dir, err, mountErr)
+		glog.V(2).Infof("azureDisk - Mount of disk:%s on dir:%s failed with mount error:%v post failure clean up was completed", diskName, dir, mountErr)
 		return mountErr
 	}
 

@@ -24,6 +24,7 @@ go_library(
         "vcs.go",
         "version.go",
     ],
+    importmap = "k8s.io/kubernetes/vendor/github.com/tools/godep",
     importpath = "github.com/tools/godep",
     visibility = ["//visibility:private"],
     deps = [
@@ -37,7 +38,6 @@ go_library(
 go_binary(
     name = "godep",
     embed = [":go_default_library"],
-    importpath = "github.com/tools/godep",
     visibility = ["//visibility:public"],
 )
 

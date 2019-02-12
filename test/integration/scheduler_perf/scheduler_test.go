@@ -50,10 +50,6 @@ var (
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "sample-node-",
 		},
-		Spec: v1.NodeSpec{
-			// TODO: investigate why this is needed.
-			ExternalID: "foo",
-		},
 		Status: v1.NodeStatus{
 			Capacity: v1.ResourceList{
 				v1.ResourcePods:   *resource.NewQuantity(110, resource.DecimalSI),
@@ -144,7 +140,7 @@ func schedulePods(config *testConfig) int32 {
 			glog.Fatalf("%v", err)
 		}
 		// 30,000 pods -> wait till @ least 300 are scheduled to start measuring.
-		// TODO Find out why sometimes there may be scheduling blips in the beggining.
+		// TODO Find out why sometimes there may be scheduling blips in the beginning.
 		if len(scheduled) > config.numPods/100 {
 			break
 		}
@@ -166,8 +162,12 @@ func schedulePods(config *testConfig) int32 {
 		// return the worst-case-scenario interval that was seen during this time.
 		// Note this should never be low due to cold-start, so allow bake in sched time if necessary.
 		if len(scheduled) >= config.numPods {
+			consumed := int(time.Since(start) / time.Second)
+			if consumed <= 0 {
+				consumed = 1
+			}
 			fmt.Printf("Scheduled %v Pods in %v seconds (%v per second on average). min QPS was %v\n",
-				config.numPods, int(time.Since(start)/time.Second), config.numPods/int(time.Since(start)/time.Second), minQps)
+				config.numPods, consumed, config.numPods/consumed, minQps)
 			return minQps
 		}
 

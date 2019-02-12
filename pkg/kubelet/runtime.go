@@ -29,7 +29,6 @@ type runtimeState struct {
 	networkError             error
 	internalError            error
 	cidr                     string
-	initError                error
 	healthChecks             []*healthCheck
 }
 
@@ -54,12 +53,6 @@ func (s *runtimeState) setRuntimeSync(t time.Time) {
 	s.lastBaseRuntimeSync = t
 }
 
-func (s *runtimeState) setInternalError(err error) {
-	s.Lock()
-	defer s.Unlock()
-	s.internalError = err
-}
-
 func (s *runtimeState) setNetworkState(err error) {
 	s.Lock()
 	defer s.Unlock()
@@ -78,19 +71,10 @@ func (s *runtimeState) podCIDR() string {
 	return s.cidr
 }
 
-func (s *runtimeState) setInitError(err error) {
-	s.Lock()
-	defer s.Unlock()
-	s.initError = err
-}
-
 func (s *runtimeState) runtimeErrors() []string {
 	s.RLock()
 	defer s.RUnlock()
 	var ret []string
-	if s.initError != nil {
-		ret = append(ret, s.initError.Error())
-	}
 	if !s.lastBaseRuntimeSync.Add(s.baseRuntimeSyncThreshold).After(time.Now()) {
 		ret = append(ret, "container runtime is down")
 	}

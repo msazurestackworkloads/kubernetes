@@ -13,8 +13,8 @@ go_library(
     deps = [
         "//pkg/registry/core/service/ipallocator:go_default_library",
         "//pkg/util/version:go_default_library",
-        "//vendor/k8s.io/api/core/v1:go_default_library",
-        "//vendor/k8s.io/client-go/tools/bootstrap/token/api:go_default_library",
+        "//staging/src/k8s.io/api/core/v1:go_default_library",
+        "//staging/src/k8s.io/client-go/tools/bootstrap/token/api:go_default_library",
     ],
 )
 
@@ -35,6 +35,5 @@ go_test(
     name = "go_default_test",
     srcs = ["constants_test.go"],
     embed = [":go_default_library"],
-    importpath = "k8s.io/kubernetes/cmd/kubeadm/app/constants",
     deps = ["//pkg/util/version:go_default_library"],
 )

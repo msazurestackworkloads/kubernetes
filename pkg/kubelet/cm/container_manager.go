@@ -28,7 +28,8 @@ import (
 	evictionapi "k8s.io/kubernetes/pkg/kubelet/eviction/api"
 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
 	"k8s.io/kubernetes/pkg/kubelet/status"
-	"k8s.io/kubernetes/pkg/scheduler/schedulercache"
+	"k8s.io/kubernetes/pkg/kubelet/util/pluginwatcher"
+	schedulercache "k8s.io/kubernetes/pkg/scheduler/cache"
 
 	"fmt"
 	"strconv"
@@ -91,6 +92,14 @@ type ContainerManager interface {
 	UpdatePluginResources(*schedulercache.NodeInfo, *lifecycle.PodAdmitAttributes) error
 
 	InternalContainerLifecycle() InternalContainerLifecycle
+
+	// GetPodCgroupRoot returns the cgroup which contains all pods.
+	GetPodCgroupRoot() string
+
+	// GetPluginRegistrationHandler returns a plugin registration handler
+	// The pluginwatcher's Handlers allow to have a single module for handling
+	// registration.
+	GetPluginRegistrationHandler() pluginwatcher.PluginHandler
 }
 
 type NodeConfig struct {
@@ -104,9 +113,12 @@ type NodeConfig struct {
 	KubeletRootDir        string
 	ProtectKernelDefaults bool
 	NodeAllocatableConfig
-	ExperimentalQOSReserved               map[v1.ResourceName]int64
+	QOSReserved                           map[v1.ResourceName]int64
 	ExperimentalCPUManagerPolicy          string
 	ExperimentalCPUManagerReconcilePeriod time.Duration
+	ExperimentalPodPidsLimit              int64
+	EnforceCPULimits                      bool
+	CPUCFSQuotaPeriod                     time.Duration
 }
 
 type NodeAllocatableConfig struct {

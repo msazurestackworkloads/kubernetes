@@ -27,11 +27,12 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
 	priorityutil "k8s.io/kubernetes/pkg/scheduler/algorithm/priorities/util"
 	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
-	"k8s.io/kubernetes/pkg/scheduler/schedulercache"
+	schedulercache "k8s.io/kubernetes/pkg/scheduler/cache"
 
 	"github.com/golang/glog"
 )
 
+// InterPodAffinity contains information to calculate inter pod affinity.
 type InterPodAffinity struct {
 	info                  predicates.NodeInfo
 	nodeLister            algorithm.NodeLister
@@ -39,6 +40,7 @@ type InterPodAffinity struct {
 	hardPodAffinityWeight int32
 }
 
+// NewInterPodAffinityPriority creates an InterPodAffinity.
 func NewInterPodAffinityPriority(
 	info predicates.NodeInfo,
 	nodeLister algorithm.NodeLister,
