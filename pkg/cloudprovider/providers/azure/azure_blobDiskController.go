@@ -490,8 +490,8 @@ func (c *BlobDiskController) createStorageAccount(storageAccountName string, sto
 
 		cp := storage.AccountCreateParameters{
 			Sku: &storage.Sku{Name: storageAccountType},
-			// switch to use StorageV2 as it's recommended according to https://docs.microsoft.com/en-us/azure/storage/common/storage-account-options
-			Kind:     storage.StorageV2,
+			// use storage v1 for azure stack.
+			Kind:     storage.Storage,
 			Tags:     map[string]*string{"created-by": to.StringPtr("azure-dd")},
 			Location: &location}
 		ctx, cancel := getContextWithCancel()
