@@ -164,7 +164,6 @@
 
 <!-- NEW RELEASE NOTES ENTRY -->
 
-
 # v1.11.8
 
 [Documentation](https://docs.k8s.io)
@@ -305,7 +304,6 @@ filename | sha512 hash
 * Fixes an issue where Portworx volumes cannot be mounted if 9001 port is already in use on the host and users remap 9001 to another port. ([#70392](https://github.com/kubernetes/kubernetes/pull/70392), [@harsh-px](https://github.com/harsh-px))
 * kube-proxy in IPVS mode will stop initiating connections to terminating pods for services with sessionAffinity set. ([#71834](https://github.com/kubernetes/kubernetes/pull/71834), [@lbernail](https://github.com/lbernail))
 * Update to use go1.10.7 with fix for CVE-2018-16875 ([#72074](https://github.com/kubernetes/kubernetes/pull/72074), [@ixdy](https://github.com/ixdy))
-
 
 
 # v1.11.6
