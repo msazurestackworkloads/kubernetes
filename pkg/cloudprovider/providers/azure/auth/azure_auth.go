@@ -26,7 +26,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"golang.org/x/crypto/pkcs12"
 	"k8s.io/klog"
+	"strings"
 )
+const adfsIdentitySystem = "ADFS"
 
 // AzureAuthConfig holds auth related part of cloud config
 type AzureAuthConfig struct {
@@ -50,10 +52,18 @@ type AzureAuthConfig struct {
 	UserAssignedIdentityID string `json:"userAssignedIdentityID" yaml:"userAssignedIdentityID"`
 	// The ID of the Azure Subscription that the cluster is deployed in
 	SubscriptionID string `json:"subscriptionId" yaml:"subscriptionId"`
+	// The ID of the Azure Subscription that the cluster is deployed in
+	IdentitySystem string `json:"identitySystem" yaml:"identitySystem"`
 }
 
 // GetServicePrincipalToken creates a new service principal token based on the configuration
 func GetServicePrincipalToken(config *AzureAuthConfig, env *azure.Environment) (*adal.ServicePrincipalToken, error) {
+	var tenantID string
+	if strings.EqualFold(config.IdentitySystem, adfsIdentitySystem) {
+		tenantID = "adfs"
+	} else {
+		tenantID = config.TenantID
+	}
 	if config.UseManagedIdentityExtension {
 		klog.V(2).Infoln("azure: using managed identity extension to retrieve access token")
 		msiEndpoint, err := adal.GetMSIVMEndpoint()
@@ -72,7 +82,7 @@ func GetServicePrincipalToken(config *AzureAuthConfig, env *azure.Environment) (
 			env.ServiceManagementEndpoint)
 	}
 
-	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, config.TenantID)
+	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("creating the OAuth config: %v", err)
 	}

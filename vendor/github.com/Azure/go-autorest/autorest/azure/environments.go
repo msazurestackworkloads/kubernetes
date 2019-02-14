@@ -180,6 +180,10 @@ func EnvironmentFromName(name string) (Environment, error) {
 // This function is particularly useful in the Hybrid Cloud model, where one must define their own
 // endpoints.
 func EnvironmentFromFile(location string) (unmarshaled Environment, err error) {
+	// if the location is empty, use the default value: /etc/kubernetes/azurestackcloud.json
+	if location == "" {
+		location = "/etc/kubernetes/azurestackcloud.json"
+	}
 	fileContents, err := ioutil.ReadFile(location)
 	if err != nil {
 		return
