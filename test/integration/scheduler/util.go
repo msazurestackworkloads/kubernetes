@@ -141,7 +141,7 @@ func initTestScheduler(
 ) *TestContext {
 	// Pod preemption is enabled by default scheduler configuration, but preemption only happens when PodPriority
 	// feature gate is enabled at the same time.
-	return initTestSchedulerWithOptions(t, context, controllerCh, setPodInformer, policy, false)
+	return initTestSchedulerWithOptions(t, context, controllerCh, setPodInformer, policy, false, time.Second)
 }
 
 // initTestSchedulerWithOptions initializes a test environment and creates a scheduler with default
@@ -153,6 +153,7 @@ func initTestSchedulerWithOptions(
 	setPodInformer bool,
 	policy *schedulerapi.Policy,
 	disablePreemption bool,
+	resyncPeriod time.Duration,
 ) *TestContext {
 	// Enable EnableEquivalenceClassCache for all integration tests.
 	defer utilfeaturetesting.SetFeatureGateDuringTest(
@@ -161,7 +162,7 @@ func initTestSchedulerWithOptions(
 		features.EnableEquivalenceClassCache, true)()
 
 	// 1. Create scheduler
-	context.informerFactory = informers.NewSharedInformerFactory(context.clientSet, time.Second)
+	context.informerFactory = informers.NewSharedInformerFactory(context.clientSet, resyncPeriod)
 
 	var podInformer coreinformers.PodInformer
 
@@ -253,7 +254,7 @@ func initTest(t *testing.T, nsPrefix string) *TestContext {
 // configuration but with pod preemption disabled.
 func initTestDisablePreemption(t *testing.T, nsPrefix string) *TestContext {
 	return initTestSchedulerWithOptions(
-		t, initTestMaster(t, nsPrefix, nil), nil, true, nil, true)
+		t, initTestMaster(t, nsPrefix, nil), nil, true, nil, true, time.Second)
 }
 
 // cleanupTest deletes the scheduler and the test namespace. It should be called
@@ -499,6 +500,17 @@ func podScheduled(c clientset.Interface, podNamespace, podName string) wait.Cond
 
 // podUnschedulable returns a condition function that returns true if the given pod
 // gets unschedulable status.
+func podSchedulableCondition(c clientset.Interface, podNamespace, podName string) (*v1.PodCondition, error) {
+	pod, err := c.CoreV1().Pods(podNamespace).Get(podName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	_, cond := podutil.GetPodCondition(&pod.Status, v1.PodScheduled)
+	return cond, nil
+}
+
+// podUnschedulable returns a condition function that returns true if the given pod
+// gets unschedulable status.
 func podUnschedulable(c clientset.Interface, podNamespace, podName string) wait.ConditionFunc {
 	return func() (bool, error) {
 		pod, err := c.CoreV1().Pods(podNamespace).Get(podName, metav1.GetOptions{})
@@ -606,7 +618,7 @@ func cleanupPods(cs clientset.Interface, t *testing.T, pods []*v1.Pod) {
 		}
 	}
 	for _, p := range pods {
-		if err := wait.Poll(time.Second, wait.ForeverTestTimeout,
+		if err := wait.Poll(time.Millisecond, wait.ForeverTestTimeout,
 			podDeleted(cs, p.Namespace, p.Name)); err != nil {
 			t.Errorf("error while waiting for pod  %v/%v to get deleted: %v", p.Namespace, p.Name, err)
 		}
