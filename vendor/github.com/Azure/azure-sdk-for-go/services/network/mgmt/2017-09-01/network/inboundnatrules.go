@@ -90,7 +90,7 @@ func (client InboundNatRulesClient) CreateOrUpdatePreparer(ctx context.Context, 
 		"subscriptionId":     autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -165,7 +165,7 @@ func (client InboundNatRulesClient) DeletePreparer(ctx context.Context, resource
 		"subscriptionId":     autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -244,7 +244,7 @@ func (client InboundNatRulesClient) GetPreparer(ctx context.Context, resourceGro
 		"subscriptionId":     autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -315,7 +315,7 @@ func (client InboundNatRulesClient) ListPreparer(ctx context.Context, resourceGr
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

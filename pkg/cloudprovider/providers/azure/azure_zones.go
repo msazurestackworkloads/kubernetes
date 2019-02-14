@@ -19,6 +19,7 @@ package azure
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -49,6 +50,7 @@ func (az *Cloud) GetZoneID(zoneLabel string) string {
 // GetZone returns the Zone containing the current availability zone and locality region that the program is running in.
 // If the node is not running with availability zones, then it will fall back to fault domain.
 func (az *Cloud) GetZone(ctx context.Context) (cloudprovider.Zone, error) {
+	if az.UseInstanceMetadata {
 	metadata, err := az.metadata.GetMetadata()
 	if err != nil {
 		return cloudprovider.Zone{}, err
@@ -74,6 +76,13 @@ func (az *Cloud) GetZone(ctx context.Context) (cloudprovider.Zone, error) {
 		FailureDomain: zone,
 		Region:        az.Location,
 	}, nil
+	}
+	// if UseInstanceMetadata is false, get the Zone name by calling ARM
+	hostname, err := os.Hostname()
+	if err != nil {
+		return cloudprovider.Zone{}, fmt.Errorf("failure getting hostname from kernel")
+	}
+	return az.vmSet.GetZoneByNodeName(hostname)
 }
 
 // GetZoneByProviderID implements Zones.GetZoneByProviderID

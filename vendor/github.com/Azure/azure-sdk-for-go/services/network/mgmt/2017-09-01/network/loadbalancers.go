@@ -68,7 +68,7 @@ func (client LoadBalancersClient) CreateOrUpdatePreparer(ctx context.Context, re
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -141,7 +141,7 @@ func (client LoadBalancersClient) DeletePreparer(ctx context.Context, resourceGr
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -218,7 +218,7 @@ func (client LoadBalancersClient) GetPreparer(ctx context.Context, resourceGroup
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -287,7 +287,7 @@ func (client LoadBalancersClient) ListPreparer(ctx context.Context, resourceGrou
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -377,7 +377,7 @@ func (client LoadBalancersClient) ListAllPreparer(ctx context.Context) (*http.Re
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -466,7 +466,7 @@ func (client LoadBalancersClient) UpdateTagsPreparer(ctx context.Context, resour
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2017-09-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
