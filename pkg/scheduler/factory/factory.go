@@ -27,8 +27,9 @@ import (
 
 	"github.com/golang/glog"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/policy/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -299,6 +300,13 @@ func NewConfigFactory(
 	if utilfeature.DefaultFeatureGate.Enabled(features.VolumeScheduling) {
 		// Setup volume binder
 		c.volumeBinder = volumebinder.NewVolumeBinder(client, pvcInformer, pvInformer, storageClassInformer)
+
+		storageClassInformer.Informer().AddEventHandler(
+			cache.ResourceEventHandlerFuncs{
+				AddFunc:    c.onStorageClassAdd,
+				DeleteFunc: c.onStorageClassDelete,
+			},
+		)
 	}
 
 	// Setup cache comparer
@@ -383,6 +391,13 @@ func (c *configFactory) onPvAdd(obj interface{}) {
 		}
 		c.invalidatePredicatesForPv(pv)
 	}
+	// Pods created when there are no PVs available will be stuck in
+	// unschedulable queue. But unbound PVs created for static provisioning and
+	// delay binding storage class are skipped in PV controller dynamic
+	// provisiong and binding process, will not trigger events to schedule pod
+	// again. So we need to move pods to active queue on PV add for this
+	// scenario.
+	c.podQueue.MoveAllToActiveQueue()
 }
 
 func (c *configFactory) onPvUpdate(old, new interface{}) {
@@ -399,6 +414,11 @@ func (c *configFactory) onPvUpdate(old, new interface{}) {
 		}
 		c.invalidatePredicatesForPvUpdate(oldPV, newPV)
 	}
+	// Scheduler.bindVolumesWorker may fail to update assumed pod volume
+	// bindings due to conflicts if PVs are updated by PV controller or other
+	// parties, then scheduler will add pod back to unschedulable queue. We
+	// need to move pods to active queue on PV update for this scenario.
+	c.podQueue.MoveAllToActiveQueue()
 }
 
 func (c *configFactory) invalidatePredicatesForPvUpdate(oldPV, newPV *v1.PersistentVolume) {
@@ -551,6 +571,59 @@ func (c *configFactory) invalidatePredicatesForPvcUpdate(old, new *v1.Persistent
 		}
 		// The bound volume type may change
 		invalidPredicates.Insert(maxPDVolumeCountPredicateKeys...)
+	}
+
+	c.equivalencePodCache.InvalidateCachedPredicateItemOfAllNodes(invalidPredicates)
+}
+
+func (c *configFactory) onStorageClassAdd(obj interface{}) {
+	sc, ok := obj.(*storagev1.StorageClass)
+	if !ok {
+		glog.Errorf("cannot convert to *storagev1.StorageClass: %v", obj)
+		return
+	}
+
+	// CheckVolumeBindingPred fails if pod has unbound immediate PVCs. If these
+	// PVCs have specified StorageClass name, creating StorageClass objects
+	// with late binding will cause predicates to pass, so we need to move pods
+	// to active queue.
+	// We don't need to invalidate cached results because results will not be
+	// cached for pod that has unbound immediate PVCs.
+	if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode == storagev1.VolumeBindingWaitForFirstConsumer {
+		c.podQueue.MoveAllToActiveQueue()
+	}
+}
+
+func (c *configFactory) onStorageClassDelete(obj interface{}) {
+	if c.enableEquivalenceClassCache {
+		var sc *storagev1.StorageClass
+		switch t := obj.(type) {
+		case *storagev1.StorageClass:
+			sc = t
+		case cache.DeletedFinalStateUnknown:
+			var ok bool
+			sc, ok = t.Obj.(*storagev1.StorageClass)
+			if !ok {
+				glog.Errorf("cannot convert to *storagev1.StorageClass: %v", t.Obj)
+				return
+			}
+		default:
+			glog.Errorf("cannot convert to *storagev1.StorageClass: %v", t)
+			return
+		}
+		c.invalidatePredicatesForStorageClass(sc)
+	}
+}
+
+func (c *configFactory) invalidatePredicatesForStorageClass(sc *storagev1.StorageClass) {
+	invalidPredicates := sets.NewString()
+
+	if utilfeature.DefaultFeatureGate.Enabled(features.VolumeScheduling) {
+		if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode == storagev1.VolumeBindingWaitForFirstConsumer {
+			// Delete can cause predicates to fail
+			invalidPredicates.Insert(predicates.CheckVolumeBindingPred)
+			invalidPredicates.Insert(predicates.NoVolumeZoneConflictPred)
+		}
 	}
 
 	c.equivalencePodCache.InvalidateCachedPredicateItemOfAllNodes(invalidPredicates)
@@ -790,7 +863,14 @@ func (c *configFactory) updateNodeInCache(oldObj, newObj interface{}) {
 	}
 
 	c.invalidateCachedPredicatesOnNodeUpdate(newNode, oldNode)
-	c.podQueue.MoveAllToActiveQueue()
+	// Only activate unschedulable pods if the node became more schedulable.
+	// We skip the node property comparison when there is no unschedulable pods in the queue
+	// to save processing cycles. We still trigger a move to active queue to cover the case
+	// that a pod being processed by the scheduler is determined unschedulable. We want this
+	// pod to be reevaluated when a change in the cluster happens.
+	if c.podQueue.NumUnschedulablePods() == 0 || nodeSchedulingPropertiesChanged(newNode, oldNode) {
+		c.podQueue.MoveAllToActiveQueue()
+	}
 }
 
 func (c *configFactory) invalidateCachedPredicatesOnNodeUpdate(newNode *v1.Node, oldNode *v1.Node) {
@@ -860,6 +940,53 @@ func (c *configFactory) invalidateCachedPredicatesOnNodeUpdate(newNode *v1.Node,
 		}
 		c.equivalencePodCache.InvalidateCachedPredicateItem(newNode.GetName(), invalidPredicates)
 	}
+}
+
+func nodeSchedulingPropertiesChanged(newNode *v1.Node, oldNode *v1.Node) bool {
+	if nodeSpecUnschedulableChanged(newNode, oldNode) {
+		return true
+	}
+	if nodeAllocatableChanged(newNode, oldNode) {
+		return true
+	}
+	if nodeLabelsChanged(newNode, oldNode) {
+		return true
+	}
+	if nodeTaintsChanged(newNode, oldNode) {
+		return true
+	}
+	if nodeConditionsChanged(newNode, oldNode) {
+		return true
+	}
+
+	return false
+}
+
+func nodeAllocatableChanged(newNode *v1.Node, oldNode *v1.Node) bool {
+	return !reflect.DeepEqual(oldNode.Status.Allocatable, newNode.Status.Allocatable)
+}
+
+func nodeLabelsChanged(newNode *v1.Node, oldNode *v1.Node) bool {
+	return !reflect.DeepEqual(oldNode.GetLabels(), newNode.GetLabels())
+}
+
+func nodeTaintsChanged(newNode *v1.Node, oldNode *v1.Node) bool {
+	return !reflect.DeepEqual(newNode.Spec.Taints, oldNode.Spec.Taints)
+}
+
+func nodeConditionsChanged(newNode *v1.Node, oldNode *v1.Node) bool {
+	strip := func(conditions []v1.NodeCondition) map[v1.NodeConditionType]v1.ConditionStatus {
+		conditionStatuses := make(map[v1.NodeConditionType]v1.ConditionStatus, len(conditions))
+		for i := range conditions {
+			conditionStatuses[conditions[i].Type] = conditions[i].Status
+		}
+		return conditionStatuses
+	}
+	return !reflect.DeepEqual(strip(oldNode.Status.Conditions), strip(newNode.Status.Conditions))
+}
+
+func nodeSpecUnschedulableChanged(newNode *v1.Node, oldNode *v1.Node) bool {
+	return newNode.Spec.Unschedulable != oldNode.Spec.Unschedulable && newNode.Spec.Unschedulable == false
 }
 
 func (c *configFactory) deleteNodeFromCache(obj interface{}) {
