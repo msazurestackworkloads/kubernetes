@@ -931,8 +931,8 @@ func (az *Cloud) reconcileLoadBalancerRule(
 				},
 				LoadDistribution: loadDistribution,
 				FrontendPort:     to.Int32Ptr(port.Port),
-				BackendPort:      to.Int32Ptr(port.NodePort),
-				EnableFloatingIP: to.BoolPtr(false),
+				BackendPort:      to.Int32Ptr(port.Port),
+				EnableFloatingIP: to.BoolPtr(true),
 			},
 		}
 		if port.Protocol == v1.ProtocolTCP {
@@ -1022,7 +1022,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 					SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
 						Protocol:                 *securityProto,
 						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.NodePort))),
+						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
 						SourceAddressPrefix:      to.StringPtr(sourceAddressPrefixes[j]),
 						DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
 						Access:    network.SecurityRuleAccessAllow,
