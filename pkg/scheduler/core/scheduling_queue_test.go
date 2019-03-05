@@ -631,7 +631,13 @@ func TestRecentlyTriedPodsGoBack(t *testing.T) {
 // This behavior ensures that an unschedulable pod does not block head of the queue when there
 // are frequent events that move pods to the active queue.
 func TestPodFailedSchedulingMultipleTimesDoesNotBlockNewerPod(t *testing.T) {
+<<<<<<< HEAD
 	q := NewPriorityQueue(nil)
+=======
+	q := NewPriorityQueue()
+	q := NewPriorityQueue(nil)
+
+>>>>>>> Merge 1.11.8 to azurestack.
 	// Add an unschedulable pod to a priority queue.
 	// This makes a situation that the pod was tried to schedule
 	// and had been determined unschedulable so far.
