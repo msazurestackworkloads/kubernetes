@@ -39,7 +39,7 @@ import (
 
 const (
 	defaultStorageAccountType       = compute.StandardLRS
-	defaultAzureDiskKind            = v1.AzureManagedDisk
+	defaultAzureDiskKind            = v1.AzureSharedBlobDisk
 	defaultAzureDataDiskCachingMode = v1.AzureDataDiskCachingReadOnly
 )
 
