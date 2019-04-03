@@ -79,11 +79,7 @@ func (ss *scaleSet) AttachDisk(isManagedDisk bool, diskName, diskURI string, nod
 	// Invalidate the cache right after updating
 	defer ss.vmssVMCache.Delete(ss.makeVmssVMName(ssName, instanceID))
 
-<<<<<<< HEAD
-	glog.V(2).Infof("azureDisk - update(%s): vm(%s) - attach disk(%s)", ss.resourceGroup, nodeName, diskName)
-=======
 	glog.V(2).Infof("azureDisk - update(%s): vm(%s) - attach disk(%s, %s)", ss.resourceGroup, nodeName, diskName, diskURI)
->>>>>>> v1.11.9
 	_, err = ss.VirtualMachineScaleSetVMsClient.Update(ctx, ss.resourceGroup, ssName, instanceID, newVM)
 	if err != nil {
 		detail := err.Error()
