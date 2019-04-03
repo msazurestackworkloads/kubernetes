@@ -43,14 +43,12 @@ func (az *Cloud) GetZone(ctx context.Context) (cloudprovider.Zone, error) {
 			Region:        az.Location,
 		}, nil
 	}
-
-	// if UseInstanceMetadata is false, get the Zone name by calling ARM
+	// if UseInstanceMetadata is false, get Zone name by calling ARM
 	hostname, err := os.Hostname()
 	if err != nil {
-		return cloudprovider.Zone{}, fmt.Errorf("can not get the host name from kernal")
+		return cloudprovider.Zone{}, fmt.Errorf("failure getting hostname from kernel")
 	}
-	return az.vmSet.GetZoneByNodeName(hostname)
-
+	return az.vmSet.GetZoneByNodeName(string(hostname))
 }
 
 // GetZoneByProviderID implements Zones.GetZoneByProviderID

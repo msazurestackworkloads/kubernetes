@@ -253,7 +253,6 @@ func (p *PriorityQueue) run() {
 	go wait.Until(p.flushUnschedulableQLeftover, 30*time.Second, p.stop)
 }
 
-
 // Add adds a pod to the active queue. It should be called only when a new pod
 // is added so there is no chance the pod is already in either queue.
 func (p *PriorityQueue) Add(pod *v1.Pod) error {
