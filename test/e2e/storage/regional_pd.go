@@ -24,13 +24,16 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
+
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
-	storage "k8s.io/api/storage/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	"k8s.io/kubernetes/pkg/kubelet/apis"
@@ -42,6 +45,9 @@ import (
 const (
 	pvDeletionTimeout       = 3 * time.Minute
 	statefulSetReadyTimeout = 3 * time.Minute
+	repdMinSize             = "200Gi"
+	taintKeyPrefix          = "zoneTaint_"
+	pvcName                 = "regional-pd-vol"
 )
 
 var _ = utils.SIGDescribe("Regional PD", func() {
@@ -86,8 +92,8 @@ func testVolumeProvisioning(c clientset.Interface, ns string) {
 				"zones":            strings.Join(cloudZones, ","),
 				"replication-type": "regional-pd",
 			},
-			claimSize:    "1.5Gi",
-			expectedSize: "2Gi",
+			claimSize:    repdMinSize,
+			expectedSize: repdMinSize,
 			pvCheck: func(volume *v1.PersistentVolume) error {
 				err := checkGCEPD(volume, "pd-standard")
 				if err != nil {
@@ -104,8 +110,8 @@ func testVolumeProvisioning(c clientset.Interface, ns string) {
 				"type":             "pd-standard",
 				"replication-type": "regional-pd",
 			},
-			claimSize:    "1.5Gi",
-			expectedSize: "2Gi",
+			claimSize:    repdMinSize,
+			expectedSize: repdMinSize,
 			pvCheck: func(volume *v1.PersistentVolume) error {
 				err := checkGCEPD(volume, "pd-standard")
 				if err != nil {
@@ -129,12 +135,22 @@ func testVolumeProvisioning(c clientset.Interface, ns string) {
 }
 
 func testZonalFailover(c clientset.Interface, ns string) {
-	nodes := framework.GetReadySchedulableNodesOrDie(c)
-	nodeCount := len(nodes.Items)
-
 	cloudZones := getTwoRandomZones(c)
-	class := newRegionalStorageClass(ns, cloudZones)
-	claimTemplate := newClaimTemplate(ns)
+	testSpec := storageClassTest{
+		name:           "Regional PD Failover on GCE/GKE",
+		cloudProviders: []string{"gce", "gke"},
+		provisioner:    "kubernetes.io/gce-pd",
+		parameters: map[string]string{
+			"type":             "pd-standard",
+			"zones":            strings.Join(cloudZones, ","),
+			"replication-type": "regional-pd",
+		},
+		claimSize:    repdMinSize,
+		expectedSize: repdMinSize,
+	}
+	class := newStorageClass(testSpec, ns, "" /* suffix */)
+	claimTemplate := newClaim(testSpec, ns, "" /* suffix */)
+	claimTemplate.Name = pvcName
 	claimTemplate.Spec.StorageClassName = &class.Name
 	statefulSet, service, regionalPDLabels := newStatefulSet(claimTemplate, ns)
 
@@ -188,41 +204,40 @@ func testZonalFailover(c clientset.Interface, ns string) {
 	Expect(err).ToNot(HaveOccurred())
 	podZone := node.Labels[apis.LabelZoneFailureDomain]
 
-	// TODO (verult) Consider using node taints to simulate zonal failure instead.
-	By("deleting instance group belonging to pod's zone")
-
-	// Asynchronously detect a pod reschedule is triggered during/after instance group deletion.
-	waitStatus := make(chan error)
-	go func() {
-		waitStatus <- waitForStatefulSetReplicasNotReady(statefulSet.Name, ns, c)
-	}()
-
-	cloud, err := framework.GetGCECloud()
-	if err != nil {
-		Expect(err).NotTo(HaveOccurred())
-	}
-	instanceGroupName := framework.TestContext.CloudConfig.NodeInstanceGroup
-	instanceGroup, err := cloud.GetInstanceGroup(instanceGroupName, podZone)
-	Expect(err).NotTo(HaveOccurred(),
-		"Error getting instance group %s in zone %s", instanceGroupName, podZone)
-	templateName, err := framework.GetManagedInstanceGroupTemplateName(podZone)
-	Expect(err).NotTo(HaveOccurred(),
-		"Error getting instance group template in zone %s", podZone)
-	err = framework.DeleteManagedInstanceGroup(podZone)
-	Expect(err).NotTo(HaveOccurred(),
-		"Error deleting instance group in zone %s", podZone)
+	By("tainting nodes in the zone the pod is scheduled in")
+	selector := labels.SelectorFromSet(labels.Set(map[string]string{apis.LabelZoneFailureDomain: podZone}))
+	nodesInZone, err := c.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: selector.String()})
+	Expect(err).ToNot(HaveOccurred())
+	removeTaintFunc := addTaint(c, ns, nodesInZone.Items, podZone)
 
 	defer func() {
-		framework.Logf("recreating instance group %s", instanceGroup.Name)
-
-		framework.ExpectNoError(framework.CreateManagedInstanceGroup(instanceGroup.Size, podZone, templateName),
-			"Error recreating instance group %s in zone %s", instanceGroup.Name, podZone)
-		framework.ExpectNoError(framework.WaitForReadyNodes(c, nodeCount, framework.RestartNodeReadyAgainTimeout),
-			"Error waiting for nodes from the new instance group to become ready.")
+		framework.Logf("removing previously added node taints")
+		removeTaintFunc()
 	}()
 
-	err = <-waitStatus
-	Expect(err).ToNot(HaveOccurred(), "Error waiting for replica to be deleted during failover: %v", err)
+	By("deleting StatefulSet pod")
+	err = c.CoreV1().Pods(ns).Delete(pod.Name, &metav1.DeleteOptions{})
+
+	// Verify the pod is scheduled in the other zone.
+	By("verifying the pod is scheduled in a different zone.")
+	var otherZone string
+	if cloudZones[0] == podZone {
+		otherZone = cloudZones[1]
+	} else {
+		otherZone = cloudZones[0]
+	}
+	err = wait.PollImmediate(framework.Poll, statefulSetReadyTimeout, func() (bool, error) {
+		framework.Logf("checking whether new pod is scheduled in zone %q", otherZone)
+		pod = getPod(c, ns, regionalPDLabels)
+		nodeName = pod.Spec.NodeName
+		node, err = c.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+		if err != nil {
+			return false, nil
+		}
+		newPodZone := node.Labels[apis.LabelZoneFailureDomain]
+		return newPodZone == otherZone, nil
+	})
+	Expect(err).NotTo(HaveOccurred(), "Error waiting for pod to be scheduled in a different zone (%q): %v", otherZone, err)
 
 	err = framework.WaitForStatefulSetReplicasReady(statefulSet.Name, ns, c, 3*time.Second, framework.RestartPodReadyAgainTimeout)
 	if err != nil {
@@ -237,7 +252,6 @@ func testZonalFailover(c clientset.Interface, ns string) {
 		"The same PVC should be used after failover.")
 
 	By("verifying the container output has 2 lines, indicating the pod has been created twice using the same regional PD.")
-	pod = getPod(c, ns, regionalPDLabels)
 	logs, err := framework.GetPodLogs(c, ns, pod.Name, "")
 	Expect(err).NotTo(HaveOccurred(),
 		"Error getting logs from pod %s in namespace %s", pod.Name, ns)
@@ -246,21 +260,40 @@ func testZonalFailover(c clientset.Interface, ns string) {
 	Expect(lineCount).To(Equal(expectedLineCount),
 		"Line count of the written file should be %d.", expectedLineCount)
 
-	// Verify the pod is scheduled in the other zone.
-	By("verifying the pod is scheduled in a different zone.")
-	var otherZone string
-	if cloudZones[0] == podZone {
-		otherZone = cloudZones[1]
-	} else {
-		otherZone = cloudZones[0]
-	}
-	nodeName = pod.Spec.NodeName
-	node, err = c.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
-	Expect(err).ToNot(HaveOccurred())
-	newPodZone := node.Labels[apis.LabelZoneFailureDomain]
-	Expect(newPodZone).To(Equal(otherZone),
-		"The pod should be scheduled in zone %s after all nodes in zone %s have been deleted", otherZone, podZone)
+}
 
+func addTaint(c clientset.Interface, ns string, nodes []v1.Node, podZone string) (removeTaint func()) {
+	reversePatches := make(map[string][]byte)
+	for _, node := range nodes {
+		oldData, err := json.Marshal(node)
+		Expect(err).NotTo(HaveOccurred())
+
+		node.Spec.Taints = append(node.Spec.Taints, v1.Taint{
+			Key:    taintKeyPrefix + ns,
+			Value:  podZone,
+			Effect: v1.TaintEffectNoSchedule,
+		})
+
+		newData, err := json.Marshal(node)
+		Expect(err).NotTo(HaveOccurred())
+
+		patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, v1.Node{})
+		Expect(err).NotTo(HaveOccurred())
+
+		reversePatchBytes, err := strategicpatch.CreateTwoWayMergePatch(newData, oldData, v1.Node{})
+		Expect(err).NotTo(HaveOccurred())
+		reversePatches[node.Name] = reversePatchBytes
+
+		_, err = c.CoreV1().Nodes().Patch(node.Name, types.StrategicMergePatchType, patchBytes)
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	return func() {
+		for nodeName, reversePatch := range reversePatches {
+			_, err := c.CoreV1().Nodes().Patch(nodeName, types.StrategicMergePatchType, reversePatch)
+			Expect(err).ToNot(HaveOccurred())
+		}
+	}
 }
 
 func getPVC(c clientset.Interface, ns string, pvcLabels map[string]string) *v1.PersistentVolumeClaim {
@@ -354,47 +387,11 @@ func newPodTemplate(labels map[string]string) *v1.PodTemplateSpec {
 						Name:          "web",
 					}},
 					VolumeMounts: []v1.VolumeMount{{
-						Name:      "regional-pd-vol",
+						Name:      pvcName,
 						MountPath: "/mnt/data/regional-pd",
 					}},
 				},
 			},
-		},
-	}
-}
-
-func newClaimTemplate(ns string) *v1.PersistentVolumeClaim {
-	return &v1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "regional-pd-vol",
-			Namespace: ns,
-		},
-		Spec: v1.PersistentVolumeClaimSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{
-				v1.ReadWriteOnce,
-			},
-			Resources: v1.ResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceName(v1.ResourceStorage): resource.MustParse("1Gi"),
-				},
-			},
-		},
-	}
-}
-
-func newRegionalStorageClass(namespace string, zones []string) *storage.StorageClass {
-	return &storage.StorageClass{
-		TypeMeta: metav1.TypeMeta{
-			Kind: "StorageClass",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace + "-sc",
-		},
-		Provisioner: "kubernetes.io/gce-pd",
-		Parameters: map[string]string{
-			"type":             "pd-standard",
-			"zones":            strings.Join(zones, ","),
-			"replication-type": "regional-pd",
 		},
 	}
 }

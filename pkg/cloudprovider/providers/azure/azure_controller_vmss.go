@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/golang/glog"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -151,7 +151,6 @@ func (ss *scaleSet) DetachDiskByName(diskName, diskURI string, nodeName types.No
 			glog.V(2).Infof("azureDisk - update(%s) abort backoff: vm(%s) detach disk(%s, %s), err: %v", ss.resourceGroup, nodeName, diskName, diskURI, err)
 		}
 	}
-
 	if err != nil {
 		glog.Errorf("azureDisk - detach disk(%s, %s) from %s failed, err: %v", diskName, diskURI, nodeName, err)
 	} else {
