@@ -772,8 +772,4 @@ func TestHighProirotyFlushUnschedulableQLeftover(t *testing.T) {
 	if p, err := q.Pop(); err != nil || p != &midPod {
 		t.Errorf("Expected: %v after Pop, but got: %v", medPriorityPod.Name, p.Name)
 	}
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> v1.11.9
