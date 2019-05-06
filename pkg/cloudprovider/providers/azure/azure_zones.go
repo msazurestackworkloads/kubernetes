@@ -82,7 +82,7 @@ func (az *Cloud) GetZone(ctx context.Context) (cloudprovider.Zone, error) {
 	if err != nil {
 		return cloudprovider.Zone{}, fmt.Errorf("failure getting hostname from kernel")
 	}
-        return az.vmSet.GetZoneByNodeName(strings.ToLower(hostname))
+	return az.vmSet.GetZoneByNodeName(strings.ToLower(hostname))
 }
 
 // GetZoneByProviderID implements Zones.GetZoneByProviderID
