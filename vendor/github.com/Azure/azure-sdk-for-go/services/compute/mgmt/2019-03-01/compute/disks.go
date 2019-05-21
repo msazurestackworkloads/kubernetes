@@ -55,16 +55,8 @@ func (client DisksClient) CreateOrUpdate(ctx context.Context, resourceGroupName 
 					Chain: []validation.Constraint{{Target: "disk.DiskProperties.CreationData.ImageReference", Name: validation.Null, Rule: false,
 						Chain: []validation.Constraint{{Target: "disk.DiskProperties.CreationData.ImageReference.ID", Name: validation.Null, Rule: true, Chain: nil}}},
 					}},
-					{Target: "disk.DiskProperties.EncryptionSettings", Name: validation.Null, Rule: false,
-						Chain: []validation.Constraint{{Target: "disk.DiskProperties.EncryptionSettings.DiskEncryptionKey", Name: validation.Null, Rule: false,
-							Chain: []validation.Constraint{{Target: "disk.DiskProperties.EncryptionSettings.DiskEncryptionKey.SourceVault", Name: validation.Null, Rule: true, Chain: nil},
-								{Target: "disk.DiskProperties.EncryptionSettings.DiskEncryptionKey.SecretURL", Name: validation.Null, Rule: true, Chain: nil},
-							}},
-							{Target: "disk.DiskProperties.EncryptionSettings.KeyEncryptionKey", Name: validation.Null, Rule: false,
-								Chain: []validation.Constraint{{Target: "disk.DiskProperties.EncryptionSettings.KeyEncryptionKey.SourceVault", Name: validation.Null, Rule: true, Chain: nil},
-									{Target: "disk.DiskProperties.EncryptionSettings.KeyEncryptionKey.KeyURL", Name: validation.Null, Rule: true, Chain: nil},
-								}},
-						}},
+					{Target: "disk.DiskProperties.EncryptionSettingsCollection", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "disk.DiskProperties.EncryptionSettingsCollection.Enabled", Name: validation.Null, Rule: true, Chain: nil}}},
 				}}}}}); err != nil {
 		return result, validation.NewError("compute.DisksClient", "CreateOrUpdate", err.Error())
 	}
@@ -113,10 +105,6 @@ func (client DisksClient) CreateOrUpdateSender(req *http.Request) (future DisksC
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
 	if err != nil {
 		return
 	}
@@ -186,10 +174,6 @@ func (client DisksClient) DeleteSender(req *http.Request) (future DisksDeleteFut
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent))
 	if err != nil {
 		return
 	}
@@ -336,10 +320,6 @@ func (client DisksClient) GrantAccessSender(req *http.Request) (future DisksGran
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
 	if err != nil {
 		return
 	}
@@ -595,10 +575,6 @@ func (client DisksClient) RevokeAccessSender(req *http.Request) (future DisksRev
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
-	if err != nil {
-		return
-	}
 	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
@@ -667,10 +643,6 @@ func (client DisksClient) UpdateSender(req *http.Request) (future DisksUpdateFut
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
 	if err != nil {
 		return
 	}

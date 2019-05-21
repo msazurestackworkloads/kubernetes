@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-10-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"k8s.io/apimachinery/pkg/types"
@@ -323,4 +323,30 @@ func (az *Cloud) IsNodeUnmanaged(nodeName string) (bool, error) {
 // All managed node's providerIDs are in format 'azure:///subscriptions/<id>/resourceGroups/<rg>/providers/Microsoft.Compute/.*'
 func (az *Cloud) IsNodeUnmanagedByProviderID(providerID string) bool {
 	return !azureNodeProviderIDRE.Match([]byte(providerID))
+}
+
+// isBackendPoolOnSameLB checks whether newBackendPoolID is on the same load balancer as existingBackendPools.
+// Since both public and internal LBs are supported, lbName and lbName-internal are treated as same.
+// If not same, the lbName for existingBackendPools would also be returned.
+func isBackendPoolOnSameLB(newBackendPoolID string, existingBackendPools []string) (bool, string, error) {
+	matches := backendPoolIDRE.FindStringSubmatch(newBackendPoolID)
+	if len(matches) != 2 {
+		return false, "", fmt.Errorf("new backendPoolID %q is in wrong format", newBackendPoolID)
+	}
+
+	newLBName := matches[1]
+	newLBNameTrimmed := strings.TrimRight(newLBName, InternalLoadBalancerNameSuffix)
+	for _, backendPool := range existingBackendPools {
+		matches := backendPoolIDRE.FindStringSubmatch(backendPool)
+		if len(matches) != 2 {
+			return false, "", fmt.Errorf("existing backendPoolID %q is in wrong format", backendPool)
+		}
+
+		lbName := matches[1]
+		if !strings.EqualFold(strings.TrimRight(lbName, InternalLoadBalancerNameSuffix), newLBNameTrimmed) {
+			return false, lbName, nil
+		}
+	}
+
+	return true, "", nil
 }

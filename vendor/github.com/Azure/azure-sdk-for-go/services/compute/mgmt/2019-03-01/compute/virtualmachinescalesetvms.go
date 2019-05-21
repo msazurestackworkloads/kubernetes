@@ -94,10 +94,6 @@ func (client VirtualMachineScaleSetVMsClient) DeallocateSender(req *http.Request
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
-	if err != nil {
-		return
-	}
 	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
@@ -163,10 +159,6 @@ func (client VirtualMachineScaleSetVMsClient) DeleteSender(req *http.Request) (f
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent))
 	if err != nil {
 		return
 	}
@@ -483,10 +475,6 @@ func (client VirtualMachineScaleSetVMsClient) PerformMaintenanceSender(req *http
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
-	if err != nil {
-		return
-	}
 	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
@@ -509,8 +497,11 @@ func (client VirtualMachineScaleSetVMsClient) PerformMaintenanceResponder(resp *
 // resourceGroupName - the name of the resource group.
 // VMScaleSetName - the name of the VM scale set.
 // instanceID - the instance ID of the virtual machine.
-func (client VirtualMachineScaleSetVMsClient) PowerOff(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string) (result VirtualMachineScaleSetVMsPowerOffFuture, err error) {
-	req, err := client.PowerOffPreparer(ctx, resourceGroupName, VMScaleSetName, instanceID)
+// skipShutdown - the parameter to request non-graceful VM shutdown. True value for this flag indicates
+// non-graceful shutdown whereas false indicates otherwise. Default value for this flag is false if not
+// specified
+func (client VirtualMachineScaleSetVMsClient) PowerOff(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, skipShutdown *bool) (result VirtualMachineScaleSetVMsPowerOffFuture, err error) {
+	req, err := client.PowerOffPreparer(ctx, resourceGroupName, VMScaleSetName, instanceID, skipShutdown)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsClient", "PowerOff", nil, "Failure preparing request")
 		return
@@ -526,7 +517,7 @@ func (client VirtualMachineScaleSetVMsClient) PowerOff(ctx context.Context, reso
 }
 
 // PowerOffPreparer prepares the PowerOff request.
-func (client VirtualMachineScaleSetVMsClient) PowerOffPreparer(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string) (*http.Request, error) {
+func (client VirtualMachineScaleSetVMsClient) PowerOffPreparer(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, skipShutdown *bool) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"instanceId":        autorest.Encode("path", instanceID),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
@@ -537,6 +528,11 @@ func (client VirtualMachineScaleSetVMsClient) PowerOffPreparer(ctx context.Conte
 	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
+	}
+	if skipShutdown != nil {
+		queryParameters["skipShutdown"] = autorest.Encode("query", *skipShutdown)
+	} else {
+		queryParameters["skipShutdown"] = autorest.Encode("query", false)
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -553,10 +549,6 @@ func (client VirtualMachineScaleSetVMsClient) PowerOffSender(req *http.Request) 
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
 	if err != nil {
 		return
 	}
@@ -628,10 +620,6 @@ func (client VirtualMachineScaleSetVMsClient) RedeploySender(req *http.Request) 
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
-	if err != nil {
-		return
-	}
 	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
@@ -653,8 +641,9 @@ func (client VirtualMachineScaleSetVMsClient) RedeployResponder(resp *http.Respo
 // resourceGroupName - the name of the resource group.
 // VMScaleSetName - the name of the VM scale set.
 // instanceID - the instance ID of the virtual machine.
-func (client VirtualMachineScaleSetVMsClient) Reimage(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string) (result VirtualMachineScaleSetVMsReimageFuture, err error) {
-	req, err := client.ReimagePreparer(ctx, resourceGroupName, VMScaleSetName, instanceID)
+// VMScaleSetVMReimageInput - parameters for the Reimaging Virtual machine in ScaleSet.
+func (client VirtualMachineScaleSetVMsClient) Reimage(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, VMScaleSetVMReimageInput *VirtualMachineScaleSetVMReimageParameters) (result VirtualMachineScaleSetVMsReimageFuture, err error) {
+	req, err := client.ReimagePreparer(ctx, resourceGroupName, VMScaleSetName, instanceID, VMScaleSetVMReimageInput)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.VirtualMachineScaleSetVMsClient", "Reimage", nil, "Failure preparing request")
 		return
@@ -670,7 +659,7 @@ func (client VirtualMachineScaleSetVMsClient) Reimage(ctx context.Context, resou
 }
 
 // ReimagePreparer prepares the Reimage request.
-func (client VirtualMachineScaleSetVMsClient) ReimagePreparer(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string) (*http.Request, error) {
+func (client VirtualMachineScaleSetVMsClient) ReimagePreparer(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, VMScaleSetVMReimageInput *VirtualMachineScaleSetVMReimageParameters) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"instanceId":        autorest.Encode("path", instanceID),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
@@ -684,10 +673,15 @@ func (client VirtualMachineScaleSetVMsClient) ReimagePreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/reimage", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
+	if VMScaleSetVMReimageInput != nil {
+		preparer = autorest.DecoratePreparer(preparer,
+			autorest.WithJSON(VMScaleSetVMReimageInput))
+	}
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
@@ -697,10 +691,6 @@ func (client VirtualMachineScaleSetVMsClient) ReimageSender(req *http.Request) (
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
 	if err != nil {
 		return
 	}
@@ -773,10 +763,6 @@ func (client VirtualMachineScaleSetVMsClient) ReimageAllSender(req *http.Request
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
-	if err != nil {
-		return
-	}
 	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
@@ -842,10 +828,6 @@ func (client VirtualMachineScaleSetVMsClient) RestartSender(req *http.Request) (
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
 	if err != nil {
 		return
 	}
@@ -926,10 +908,6 @@ func (client VirtualMachineScaleSetVMsClient) RunCommandSender(req *http.Request
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
-	if err != nil {
-		return
-	}
 	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
@@ -996,10 +974,6 @@ func (client VirtualMachineScaleSetVMsClient) StartSender(req *http.Request) (fu
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
 	if err != nil {
 		return
 	}
@@ -1092,10 +1066,6 @@ func (client VirtualMachineScaleSetVMsClient) UpdateSender(req *http.Request) (f
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
 	if err != nil {
 		return
 	}
