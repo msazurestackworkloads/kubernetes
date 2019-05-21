@@ -905,7 +905,7 @@ func (client VirtualMachinesClient) ListByLocationPreparer(ctx context.Context, 
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1201,7 +1201,7 @@ func (client VirtualMachinesClient) ReimagePreparer(ctx context.Context, resourc
 		"vmName":            autorest.Encode("path", VMName),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
