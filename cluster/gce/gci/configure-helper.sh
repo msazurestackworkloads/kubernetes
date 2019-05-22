@@ -1233,21 +1233,25 @@ EOF
 function start-node-problem-detector {
   echo "Start node problem detector"
   local -r npd_bin="${KUBE_HOME}/bin/node-problem-detector"
-  local -r km_config="${KUBE_HOME}/node-problem-detector/config/kernel-monitor.json"
-  # TODO(random-liu): Handle this for alternative container runtime.
-  local -r dm_config="${KUBE_HOME}/node-problem-detector/config/docker-monitor.json"
-  local -r custom_km_config="${KUBE_HOME}/node-problem-detector/config/kernel-monitor-counter.json,${KUBE_HOME}/node-problem-detector/config/systemd-monitor-counter.json,${KUBE_HOME}/node-problem-detector/config/docker-monitor-counter.json"
   echo "Using node problem detector binary at ${npd_bin}"
-  local flags="${NPD_TEST_LOG_LEVEL:-"--v=2"} ${NPD_TEST_ARGS:-}"
-  flags+=" --logtostderr"
-  flags+=" --system-log-monitors=${km_config},${dm_config}"
-  flags+=" --custom-plugin-monitors=${custom_km_config}"
-  flags+=" --apiserver-override=https://${KUBERNETES_MASTER_NAME}?inClusterConfig=false&auth=/var/lib/node-problem-detector/kubeconfig"
-  local -r npd_port=${NODE_PROBLEM_DETECTOR_PORT:-20256}
-  flags+=" --port=${npd_port}"
-  if [[ -n "${EXTRA_NPD_ARGS:-}" ]]; then
-    flags+=" ${EXTRA_NPD_ARGS}"
+
+  local flags="${NODE_PROBLEM_DETECTOR_CUSTOM_FLAGS:-}"
+  if [[ -z "${flags}" ]]; then
+    local -r km_config="${KUBE_HOME}/node-problem-detector/config/kernel-monitor.json"
+    # TODO(random-liu): Handle this for alternative container runtime.
+    local -r dm_config="${KUBE_HOME}/node-problem-detector/config/docker-monitor.json"
+    local -r custom_km_config="${KUBE_HOME}/node-problem-detector/config/kernel-monitor-counter.json,${KUBE_HOME}/node-problem-detector/config/systemd-monitor-counter.json,${KUBE_HOME}/node-problem-detector/config/docker-monitor-counter.json"
+    flags="${NPD_TEST_LOG_LEVEL:-"--v=2"} ${NPD_TEST_ARGS:-}"
+    flags+=" --logtostderr"
+    flags+=" --system-log-monitors=${km_config},${dm_config}"
+    flags+=" --custom-plugin-monitors=${custom_km_config}"
+    local -r npd_port=${NODE_PROBLEM_DETECTOR_PORT:-20256}
+    flags+=" --port=${npd_port}"
+    if [[ -n "${EXTRA_NPD_ARGS:-}" ]]; then
+      flags+=" ${EXTRA_NPD_ARGS}"
+    fi
   fi
+  flags+=" --apiserver-override=https://${KUBERNETES_MASTER_NAME}?inClusterConfig=false&auth=/var/lib/node-problem-detector/kubeconfig"
 
   # Write the systemd service file for node problem detector.
   cat <<EOF >/etc/systemd/system/node-problem-detector.service
@@ -2330,7 +2334,7 @@ function setup-fluentd {
   fluentd_gcp_yaml_version="${FLUENTD_GCP_YAML_VERSION:-v3.2.0}"
   sed -i -e "s@{{ fluentd_gcp_yaml_version }}@${fluentd_gcp_yaml_version}@g" "${fluentd_gcp_yaml}"
   sed -i -e "s@{{ fluentd_gcp_yaml_version }}@${fluentd_gcp_yaml_version}@g" "${fluentd_gcp_scaler_yaml}"
-  fluentd_gcp_version="${FLUENTD_GCP_VERSION:-0.6-1.6.0-1}"
+  fluentd_gcp_version="${FLUENTD_GCP_VERSION:-1.6.8}"
   sed -i -e "s@{{ fluentd_gcp_version }}@${fluentd_gcp_version}@g" "${fluentd_gcp_yaml}"
   update-daemon-set-prometheus-to-sd-parameters ${fluentd_gcp_yaml}
   start-fluentd-resource-update ${fluentd_gcp_yaml}
