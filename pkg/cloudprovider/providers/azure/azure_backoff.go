@@ -22,7 +22,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-07-01/network"
 	"k8s.io/klog"
 
 	"k8s.io/api/core/v1"
@@ -336,8 +336,9 @@ func shouldRetryHTTPRequest(resp *http.Response, err error) bool {
 	return false
 }
 
+// processHTTPRetryResponse : return true means stop retry, false means continue retry
 func (az *Cloud) processHTTPRetryResponse(service *v1.Service, reason string, resp *http.Response, err error) (bool, error) {
-	if resp != nil && isSuccessHTTPResponse(*resp) {
+	if err == nil && resp != nil && isSuccessHTTPResponse(*resp) {
 		// HTTP 2xx suggests a successful response
 		return true, nil
 	}
