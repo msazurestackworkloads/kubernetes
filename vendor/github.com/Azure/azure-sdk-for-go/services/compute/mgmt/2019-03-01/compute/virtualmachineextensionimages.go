@@ -19,9 +19,10 @@ package compute
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // VirtualMachineExtensionImagesClient is the compute Client
@@ -75,7 +76,7 @@ func (client VirtualMachineExtensionImagesClient) GetPreparer(ctx context.Contex
 		"version":        autorest.Encode("path", version),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -141,7 +142,7 @@ func (client VirtualMachineExtensionImagesClient) ListTypesPreparer(ctx context.
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -209,7 +210,7 @@ func (client VirtualMachineExtensionImagesClient) ListVersionsPreparer(ctx conte
 		"type":           autorest.Encode("path", typeParameter),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

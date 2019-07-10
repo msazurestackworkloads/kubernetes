@@ -19,9 +19,10 @@ package compute
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // VirtualMachineImagesClient is the compute Client
@@ -79,7 +80,7 @@ func (client VirtualMachineImagesClient) GetPreparer(ctx context.Context, locati
 		"version":        autorest.Encode("path", version),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -151,7 +152,7 @@ func (client VirtualMachineImagesClient) ListPreparer(ctx context.Context, locat
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -227,7 +228,7 @@ func (client VirtualMachineImagesClient) ListOffersPreparer(ctx context.Context,
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -292,7 +293,7 @@ func (client VirtualMachineImagesClient) ListPublishersPreparer(ctx context.Cont
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -361,7 +362,7 @@ func (client VirtualMachineImagesClient) ListSkusPreparer(ctx context.Context, l
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

@@ -19,9 +19,10 @@ package network
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // VpnSitesClient is the network Client
@@ -68,7 +69,7 @@ func (client VpnSitesClient) CreateOrUpdatePreparer(ctx context.Context, resourc
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -137,7 +138,7 @@ func (client VpnSitesClient) DeletePreparer(ctx context.Context, resourceGroupNa
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -209,7 +210,7 @@ func (client VpnSitesClient) GetPreparer(ctx context.Context, resourceGroupName 
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -272,7 +273,7 @@ func (client VpnSitesClient) ListPreparer(ctx context.Context) (*http.Request, e
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -365,7 +366,7 @@ func (client VpnSitesClient) ListByResourceGroupPreparer(ctx context.Context, re
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -454,7 +455,7 @@ func (client VpnSitesClient) UpdateTagsPreparer(ctx context.Context, resourceGro
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

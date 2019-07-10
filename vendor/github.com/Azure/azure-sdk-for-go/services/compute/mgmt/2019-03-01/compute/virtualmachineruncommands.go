@@ -19,10 +19,11 @@ package compute
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
-	"net/http"
 )
 
 // VirtualMachineRunCommandsClient is the compute Client
@@ -80,7 +81,7 @@ func (client VirtualMachineRunCommandsClient) GetPreparer(ctx context.Context, l
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -152,7 +153,7 @@ func (client VirtualMachineRunCommandsClient) ListPreparer(ctx context.Context, 
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-03-01"
+	const APIVersion = "2017-12-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

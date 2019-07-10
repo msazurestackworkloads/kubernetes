@@ -19,9 +19,10 @@ package network
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"net/http"
 )
 
 // VirtualWANsClient is the network Client
@@ -68,7 +69,7 @@ func (client VirtualWANsClient) CreateOrUpdatePreparer(ctx context.Context, reso
 		"VirtualWANName":    autorest.Encode("path", virtualWANName),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -137,7 +138,7 @@ func (client VirtualWANsClient) DeletePreparer(ctx context.Context, resourceGrou
 		"VirtualWANName":    autorest.Encode("path", virtualWANName),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -209,7 +210,7 @@ func (client VirtualWANsClient) GetPreparer(ctx context.Context, resourceGroupNa
 		"VirtualWANName":    autorest.Encode("path", virtualWANName),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -272,7 +273,7 @@ func (client VirtualWANsClient) ListPreparer(ctx context.Context) (*http.Request
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -365,7 +366,7 @@ func (client VirtualWANsClient) ListByResourceGroupPreparer(ctx context.Context,
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -454,7 +455,7 @@ func (client VirtualWANsClient) UpdateTagsPreparer(ctx context.Context, resource
 		"VirtualWANName":    autorest.Encode("path", virtualWANName),
 	}
 
-	const APIVersion = "2018-07-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
