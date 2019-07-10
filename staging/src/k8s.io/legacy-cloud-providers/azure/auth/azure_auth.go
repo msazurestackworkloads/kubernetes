@@ -34,6 +34,10 @@ var (
 	ErrorNoAuth = fmt.Errorf("no credentials provided for Azure cloud provider")
 )
 
+const (
+	adfsIdentitySystem = "ADFS"
+)
+
 // AzureAuthConfig holds auth related part of cloud config
 type AzureAuthConfig struct {
 	// The cloud environment identifier. Takes values from https://github.com/Azure/go-autorest/blob/ec5f4903f77ed9927ac95b19ab8e44ada64c1356/autorest/azure/environments.go#L13
@@ -57,13 +61,13 @@ type AzureAuthConfig struct {
 	// The ID of the Azure Subscription that the cluster is deployed in
 	SubscriptionID string `json:"subscriptionId,omitempty" yaml:"subscriptionId,omitempty"`
 	// The ID of the Azure Subscription that the cluster is deployed in
-	IdentitySystem string `json:"identitySystem,omitempty" yaml:"identitySystem,omitempty"`
+	IdentitySystem string `json:"identitySystem" yaml:"identitySystem"`
 }
 
 // GetServicePrincipalToken creates a new service principal token based on the configuration
 func GetServicePrincipalToken(config *AzureAuthConfig, env *azure.Environment) (*adal.ServicePrincipalToken, error) {
 	var tenantID string
-	if config.IdentitySystem != nil && strings.EqualFold(config.IdentitySystem, adfsIdentitySystem) {
+	if strings.EqualFold(config.IdentitySystem, adfsIdentitySystem) {
 		tenantID = "adfs"
 	} else {
 		tenantID = config.TenantID
