@@ -129,8 +129,6 @@ func TestGetPrefix(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD
-=======
 func TestStripPathShortcuts(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -253,7 +251,6 @@ func TestIsDestRelative(t *testing.T) {
 	}
 }
 
->>>>>>> v1.12.9
 func checkErr(t *testing.T, err error) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
