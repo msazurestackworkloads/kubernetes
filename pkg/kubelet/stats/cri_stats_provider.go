@@ -686,7 +686,6 @@ func removeTerminatedPods(pods []*runtimeapi.PodSandbox) []*runtimeapi.PodSandbo
 			result = append(result, refs[len(refs)-1])
 		}
 	}
-
 	return result
 }
 
