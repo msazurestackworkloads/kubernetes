@@ -527,8 +527,8 @@ func (ss *scaleSet) GetVMSetNames(service *v1.Service, nodes []*v1.Node) (vmSetN
 
 // extractResourceGroupByVMSSNicID extracts the resource group name by vmss nicID.
 func extractResourceGroupByVMSSNicID(nicID string) (string, error) {
-	matches := vmssNicResourceGroupRE.FindStringSubmatch(nicID)
-	if len(matches) != 2 {
+	matches := vmssIPConfigurationRE.FindStringSubmatch(nicID)
+	if len(matches) != 4 {
 		return "", fmt.Errorf("error of extracting resourceGroup from nicID %q", nicID)
 	}
 
