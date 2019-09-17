@@ -36,7 +36,7 @@ import (
 
 const (
 	// The version number is taken from "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-06-01/network".
-	azureNetworkAPIVersion              = "2019-06-01"
+	azureNetworkAPIVersion              = "2017-10-01"
 	virtualMachineScaleSetsDeallocating = "Deallocating"
 )
 

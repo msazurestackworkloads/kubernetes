@@ -102,7 +102,7 @@ func (client BlobServicesClient) GetServicePropertiesPreparer(ctx context.Contex
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-04-01"
+	const APIVersion = "2016-01-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -207,7 +207,7 @@ func (client BlobServicesClient) SetServicePropertiesPreparer(ctx context.Contex
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-04-01"
+	const APIVersion = "2016-01-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
