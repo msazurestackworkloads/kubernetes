@@ -79,7 +79,7 @@ func (client VirtualWansClient) CreateOrUpdatePreparer(ctx context.Context, reso
 		"VirtualWANName":    autorest.Encode("path", virtualWANName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -159,7 +159,7 @@ func (client VirtualWansClient) DeletePreparer(ctx context.Context, resourceGrou
 		"VirtualWANName":    autorest.Encode("path", virtualWANName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -241,7 +241,7 @@ func (client VirtualWansClient) GetPreparer(ctx context.Context, resourceGroupNa
 		"VirtualWANName":    autorest.Encode("path", virtualWANName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -314,7 +314,7 @@ func (client VirtualWansClient) ListPreparer(ctx context.Context) (*http.Request
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -427,7 +427,7 @@ func (client VirtualWansClient) ListByResourceGroupPreparer(ctx context.Context,
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -536,7 +536,7 @@ func (client VirtualWansClient) UpdateTagsPreparer(ctx context.Context, resource
 		"VirtualWANName":    autorest.Encode("path", virtualWANName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
