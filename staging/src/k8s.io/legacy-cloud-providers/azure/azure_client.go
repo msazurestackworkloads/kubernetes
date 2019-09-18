@@ -34,7 +34,8 @@ import (
 
 const (
 	// The version number is taken from "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-07-01/network".
-	azureNetworkAPIVersion = "2017-10-01"
+	azureNetworkAPIVersion              = "2017-10-01"
+	virtualMachineScaleSetsDeallocating = "Deallocating"
 )
 
 // Helpers for rate limiting error/error channel creation
@@ -1096,7 +1097,7 @@ func (az *azVirtualMachineScaleSetVMsClient) List(ctx context.Context, resourceG
 
 func (az *azVirtualMachineScaleSetVMsClient) Update(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, parameters compute.VirtualMachineScaleSetVM, source string) (resp *http.Response, err error) {
 	if !az.rateLimiterWriter.TryAccept() {
-		err = createRateLimitErr(true, "VMSSUpdate")
+		err = createRateLimitErr(true, "VMSSVMUpdate")
 		return
 	}
 

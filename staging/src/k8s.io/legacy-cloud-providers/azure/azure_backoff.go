@@ -170,7 +170,7 @@ func (az *Cloud) CreateOrUpdateSecurityGroup(service *v1.Service, sg network.Sec
 		}
 
 		// Invalidate the cache because another new operation has canceled the current request.
-		if strings.Contains(strings.ToLower(err.Error()), operationCancledErrorMessage) {
+		if err != nil && strings.Contains(strings.ToLower(err.Error()), operationCancledErrorMessage) {
 			az.nsgCache.Delete(*sg.Name)
 		}
 
@@ -232,7 +232,7 @@ func (az *Cloud) CreateOrUpdateLB(service *v1.Service, lb network.LoadBalancer) 
 			az.lbCache.Delete(*lb.Name)
 		}
 		// Invalidate the cache because another new operation has canceled the current request.
-		if strings.Contains(strings.ToLower(err.Error()), operationCancledErrorMessage) {
+		if err != nil && strings.Contains(strings.ToLower(err.Error()), operationCancledErrorMessage) {
 			az.lbCache.Delete(*lb.Name)
 		}
 		return err
@@ -608,6 +608,50 @@ func (az *Cloud) UpdateVmssVMWithRetry(resourceGroupName string, VMScaleSetName 
 		klog.V(10).Infof("VirtualMachinesClient.CreateOrUpdate(%s,%s): end", VMScaleSetName, instanceID)
 		return az.processHTTPRetryResponse(nil, "", resp, err)
 	})
+}
+
+// CreateOrUpdateVmssWithRetry invokes az.VirtualMachineScaleSetsClient.Update with exponential backoff retry
+func (az *Cloud) CreateOrUpdateVmssWithRetry(resourceGroupName string, VMScaleSetName string, parameters compute.VirtualMachineScaleSet) error {
+	return wait.ExponentialBackoff(az.requestBackoff(), func() (bool, error) {
+		ctx, cancel := getContextWithCancel()
+		defer cancel()
+
+		// When vmss is being deleted, CreateOrUpdate API would report "the vmss is being deleted" error.
+		// Since it is being deleted, we shouldn't send more CreateOrUpdate requests for it.
+		klog.V(3).Infof("CreateOrUpdateVmssWithRetry: verify the status of the vmss being created or updated")
+		vmss, err := az.VirtualMachineScaleSetsClient.Get(ctx, resourceGroupName, VMScaleSetName)
+		if vmss.ProvisioningState != nil && strings.EqualFold(*vmss.ProvisioningState, virtualMachineScaleSetsDeallocating) {
+			klog.V(3).Infof("CreateOrUpdateVmssWithRetry: found vmss %s being deleted, skipping", VMScaleSetName)
+			return true, nil
+		}
+
+		resp, err := az.VirtualMachineScaleSetsClient.CreateOrUpdate(ctx, resourceGroupName, VMScaleSetName, parameters)
+		klog.V(10).Infof("UpdateVmssVMWithRetry: VirtualMachineScaleSetsClient.CreateOrUpdate(%s): end", VMScaleSetName)
+
+		return az.processHTTPRetryResponse(nil, "", resp, err)
+	})
+}
+
+// GetScaleSetWithRetry gets scale set with exponential backoff retry
+func (az *Cloud) GetScaleSetWithRetry(service *v1.Service, resourceGroupName, vmssName string) (compute.VirtualMachineScaleSet, error) {
+	var result compute.VirtualMachineScaleSet
+	var retryErr error
+
+	err := wait.ExponentialBackoff(az.requestBackoff(), func() (bool, error) {
+		ctx, cancel := getContextWithCancel()
+		defer cancel()
+
+		result, retryErr = az.VirtualMachineScaleSetsClient.Get(ctx, resourceGroupName, vmssName)
+		if retryErr != nil {
+			az.Event(service, v1.EventTypeWarning, "GetVirtualMachineScaleSet", retryErr.Error())
+			klog.Errorf("backoff: failure for scale set %q, will retry,err=%v", vmssName, retryErr)
+			return false, nil
+		}
+		klog.V(4).Infof("backoff: success for scale set %q", vmssName)
+		return true, nil
+	})
+
+	return result, err
 }
 
 // isSuccessHTTPResponse determines if the response from an HTTP request suggests success
