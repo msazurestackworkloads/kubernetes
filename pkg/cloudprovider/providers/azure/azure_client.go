@@ -27,9 +27,12 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2018-07-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
-	"k8s.io/klog"
-
 	"k8s.io/client-go/util/flowcontrol"
+	"k8s.io/klog"
+)
+
+const (
+	virtualMachineScaleSetsDeallocating = "Deallocating"
 )
 
 // Helpers for rate limiting error/error channel creation
@@ -1002,7 +1005,7 @@ func (az *azVirtualMachineScaleSetVMsClient) List(ctx context.Context, resourceG
 
 func (az *azVirtualMachineScaleSetVMsClient) Update(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, parameters compute.VirtualMachineScaleSetVM) (resp *http.Response, err error) {
 	if !az.rateLimiterWriter.TryAccept() {
-		err = createRateLimitErr(true, "VMSSUpdate")
+		err = createRateLimitErr(true, "VMSSVMUpdate")
 		return
 	}
 
