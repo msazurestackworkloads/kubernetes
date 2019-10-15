@@ -60,8 +60,10 @@ type AzureAuthConfig struct {
 	UserAssignedIdentityID string `json:"userAssignedIdentityID,omitempty" yaml:"userAssignedIdentityID,omitempty"`
 	// The ID of the Azure Subscription that the cluster is deployed in
 	SubscriptionID string `json:"subscriptionId,omitempty" yaml:"subscriptionId,omitempty"`
-	// The ID of the Azure Subscription that the cluster is deployed in
+	// IdentitySystem indicates the identity system used by the cloud (azure_ad or adfs)
 	IdentitySystem string `json:"identitySystem" yaml:"identitySystem"`
+	// ResourceManagerEndpoint specifies the resource manager URL
+	ResourceManagerEndpoint string `json:"resourceManagerEndpoint" yaml:"resourceManagerEndpoint"`
 }
 
 // GetServicePrincipalToken creates a new service principal token based on the configuration
@@ -126,10 +128,14 @@ func GetServicePrincipalToken(config *AzureAuthConfig, env *azure.Environment) (
 }
 
 // ParseAzureEnvironment returns azure environment by name
-func ParseAzureEnvironment(cloudName string) (*azure.Environment, error) {
+func ParseAzureEnvironment(cloudName, resourceManagerEndpoint string) (*azure.Environment, error) {
 	var env azure.Environment
 	var err error
-	if cloudName == "" {
+	if resourceManagerEndpoint != "" {
+		env, err = azure.EnvironmentFromURL(resourceManagerEndpoint)
+		env.ManagementPortalURL = env.ResourceManagerEndpoint
+		env.ServiceManagementEndpoint = env.TokenAudience
+	} else if cloudName == "" {
 		env = azure.PublicCloud
 	} else {
 		env, err = azure.EnvironmentFromName(cloudName)

@@ -48,7 +48,7 @@ func TestParseConfig(t *testing.T) {
 		"aadClientCertPath": "aadClientCertPath",
 		"aadClientId": "aadClientId",
 		"aadClientSecret": "aadClientSecret",
-		"cloud":"AzurePublicCloud",
+		"cloud":"AzureStackCloud",
 		"cloudProviderBackoff": true,
 		"cloudProviderBackoffDuration": 1,
 		"cloudProviderBackoffExponent": 1,
@@ -74,6 +74,7 @@ func TestParseConfig(t *testing.T) {
 		"useManagedIdentityExtension": true,
 		"vnetName": "vnetName",
 		"vnetResourceGroup": "vnetResourceGroup",
+		"resourceManagerEndpoint": "https://management.local.azurestack.external",
 		vmType: "standard"
 	}`
 	expected := &Config{
@@ -82,10 +83,11 @@ func TestParseConfig(t *testing.T) {
 			AADClientCertPath:           "aadClientCertPath",
 			AADClientID:                 "aadClientId",
 			AADClientSecret:             "aadClientSecret",
-			Cloud:                       "AzurePublicCloud",
+			Cloud:                       "AzureStackCloud",
 			SubscriptionID:              "subscriptionId",
 			TenantID:                    "tenantId",
 			UseManagedIdentityExtension: true,
+			ResourceManagerEndpoint:     "https://management.local.azurestack.external",
 		},
 		CloudProviderBackoff:              true,
 		CloudProviderBackoffDuration:      1,
@@ -1569,7 +1571,8 @@ func TestNewCloudFromJSON(t *testing.T) {
 		"cloudProviderBackoff": true,
 		"cloudProviderRatelimit": true,
 		"cloudProviderRateLimitQPS": 0.5,
-		"cloudProviderRateLimitBucket": 5
+		"cloudProviderRateLimitBucket": 5,
+		"resourceManagerEndpoint": "https://management.orlando.azurestack.corp.microsoft.com/"
 	}`
 	validateConfig(t, config)
 }
@@ -1619,6 +1622,7 @@ cloudProviderBackoffJitter: 1.0
 cloudProviderRatelimit: true
 cloudProviderRateLimitQPS: 0.5
 cloudProviderRateLimitBucket: 5
+resourceManagerEndpoint: https://management.orlando.azurestack.corp.microsoft.com/
 `
 	validateConfig(t, config)
 }
@@ -1691,6 +1695,9 @@ func validateConfig(t *testing.T, config string) {
 	}
 	if azureCloud.CloudProviderRateLimitBucket != 5 {
 		t.Errorf("got incorrect value for CloudProviderRateLimitBucket")
+	}
+	if azureCloud.ResourceManagerEndpoint != "https://management.orlando.azurestack.corp.microsoft.com/" {
+		t.Errorf("got incorrect value for ResourceManagerEndpoint")
 	}
 }
 
