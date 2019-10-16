@@ -600,7 +600,7 @@ func (ss *scaleSet) getScaleSetWithRetry(service *v1.Service, name string) (comp
 	var exists bool
 
 	err := wait.ExponentialBackoff(ss.requestBackoff(), func() (bool, error) {
-		cached, retryErr := ss.vmssCache.Get(name)
+		cached, retryErr := ss.vmssVMCache.Get(name)
 		if retryErr != nil {
 			ss.Event(service, v1.EventTypeWarning, "GetVirtualMachineScaleSet", retryErr.Error())
 			klog.Errorf("backoff: failure for scale set %q, will retry,err=%v", name, retryErr)
