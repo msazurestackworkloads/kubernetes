@@ -29,7 +29,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-07-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -45,6 +45,7 @@ var (
 	resourceGroupRE        = regexp.MustCompile(`.*/subscriptions/(?:.*)/resourceGroups/(.+)/providers/Microsoft.Compute/virtualMachineScaleSets/(?:.*)/virtualMachines(?:.*)`)
 	vmssNicResourceGroupRE = regexp.MustCompile(`.*/subscriptions/(?:.*)/resourceGroups/(.+)/providers/Microsoft.Compute/virtualMachineScaleSets/(?:.*)/virtualMachines/(?:.*)/networkInterfaces/(?:.*)`)
 	vmssMachineIDTemplate  = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachineScaleSets/%s/virtualMachines/%s"
+	vmssVMProviderIDRE     = regexp.MustCompile(`azure:///subscriptions/(?:.*)/resourceGroups/(.+)/providers/Microsoft.Compute/virtualMachineScaleSets/(.+)/virtualMachines/(?:\d+)`)
 )
 
 // scaleSet implements VMSet interface for Azure scale set.
@@ -606,7 +607,7 @@ func (ss *scaleSet) getScaleSet(service *v1.Service, name string) (compute.Virtu
 		var result compute.VirtualMachineScaleSet
 		var exists bool
 
-		cached, err := ss.vmssCache.Get(name)
+		cached, err := ss.vmssVMCache.Get(name)
 		if err != nil {
 			ss.Event(service, v1.EventTypeWarning, "GetVirtualMachineScaleSet", err.Error())
 			klog.Errorf("backoff: failure for scale set %q, will retry,err=%v", name, err)
@@ -630,7 +631,7 @@ func (ss *scaleSet) getScaleSetWithRetry(service *v1.Service, name string) (comp
 	var exists bool
 
 	err := wait.ExponentialBackoff(ss.requestBackoff(), func() (bool, error) {
-		cached, retryErr := ss.vmssCache.Get(name)
+		cached, retryErr := ss.vmssVMCache.Get(name)
 		if retryErr != nil {
 			ss.Event(service, v1.EventTypeWarning, "GetVirtualMachineScaleSet", retryErr.Error())
 			klog.Errorf("backoff: failure for scale set %q, will retry,err=%v", name, retryErr)
@@ -647,6 +648,38 @@ func (ss *scaleSet) getScaleSetWithRetry(service *v1.Service, name string) (comp
 	})
 
 	return result, exists, err
+}
+
+// getPrimaryNetworkInterfaceConfigurationForScaleSet gets primary network interface configuration for scale set.
+func (ss *scaleSet) getPrimaryNetworkInterfaceConfigurationForScaleSet(networkConfigurations []compute.VirtualMachineScaleSetNetworkConfiguration, vmssName string) (*compute.VirtualMachineScaleSetNetworkConfiguration, error) {
+	if len(networkConfigurations) == 1 {
+		return &networkConfigurations[0], nil
+	}
+
+	for idx := range networkConfigurations {
+		networkConfig := &networkConfigurations[idx]
+		if networkConfig.Primary != nil && *networkConfig.Primary == true {
+			return networkConfig, nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to find a primary network configuration for the scale set %q", vmssName)
+}
+
+func getPrimaryIPConfigFromVMSSNetworkConfig(config *compute.VirtualMachineScaleSetNetworkConfiguration) (*compute.VirtualMachineScaleSetIPConfiguration, error) {
+	ipConfigurations := *config.IPConfigurations
+	if len(ipConfigurations) == 1 {
+		return &ipConfigurations[0], nil
+	}
+
+	for idx := range ipConfigurations {
+		ipConfig := &ipConfigurations[idx]
+		if ipConfig.Primary != nil && *ipConfig.Primary == true {
+			return ipConfig, nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to find a primary IP configuration")
 }
 
 // getPrimaryNetworkConfiguration gets primary network interface configuration for scale sets.
@@ -810,76 +843,50 @@ func (ss *scaleSet) ensureHostsInVMSetPool(service *v1.Service, backendPoolID st
 			break
 		}
 	}
-
-	// The backendPoolID has already been found from existing LoadBalancerBackendAddressPools.
-	if foundPool {
-		return nil
-	}
-
-	if ss.useStandardLoadBalancer() && len(newBackendPools) > 0 {
-		// Although standard load balancer supports backends from multiple scale
-		// sets, the same network interface couldn't be added to more than one load balancer of
-		// the same type. Omit those nodes (e.g. masters) so Azure ARM won't complain
-		// about this.
-		newBackendPoolsIDs := make([]string, 0, len(newBackendPools))
-		for _, pool := range newBackendPools {
-			if pool.ID != nil {
-				newBackendPoolsIDs = append(newBackendPoolsIDs, *pool.ID)
+	if !foundPool {
+		if ss.useStandardLoadBalancer() && len(newBackendPools) > 0 {
+			// Although standard load balancer supports backends from multiple vmss,
+			// the same network interface couldn't be added to more than one load balancer of
+			// the same type. Omit those nodes (e.g. masters) so Azure ARM won't complain
+			// about this.
+			newBackendPoolsIDs := make([]string, 0, len(newBackendPools))
+			for _, pool := range newBackendPools {
+				if pool.ID != nil {
+					newBackendPoolsIDs = append(newBackendPoolsIDs, *pool.ID)
+				}
+			}
+			isSameLB, oldLBName, err := isBackendPoolOnSameLB(backendPoolID, newBackendPoolsIDs)
+			if err != nil {
+				return err
+			}
+			if !isSameLB {
+				klog.V(4).Infof("VMSS %q has already been added to LB %q, omit adding it to a new one", vmSetName, oldLBName)
+				return nil
 			}
 		}
-		isSameLB, oldLBName, err := isBackendPoolOnSameLB(backendPoolID, newBackendPoolsIDs)
+
+		newBackendPools = append(newBackendPools,
+			compute.SubResource{
+				ID: to.StringPtr(backendPoolID),
+			})
+		primaryIPConfiguration.LoadBalancerBackendAddressPools = &newBackendPools
+
+		err := ss.createOrUpdateVMSS(service, virtualMachineScaleSet)
 		if err != nil {
 			return err
 		}
-		if !isSameLB {
-			klog.V(4).Infof("Node %q has already been added to LB %q, omit adding it to a new one", nodeName, oldLBName)
-			return nil
-		}
 	}
 
-	// Compose a new vmssVM with added backendPoolID.
-	newBackendPools = append(newBackendPools,
-		compute.SubResource{
-			ID: to.StringPtr(backendPoolID),
-		})
-	primaryIPConfiguration.LoadBalancerBackendAddressPools = &newBackendPools
-	newVM := compute.VirtualMachineScaleSetVM{
-		Sku:      vm.Sku,
-		Location: vm.Location,
-		VirtualMachineScaleSetVMProperties: &compute.VirtualMachineScaleSetVMProperties{
-			HardwareProfile: vm.HardwareProfile,
-			NetworkProfileConfiguration: &compute.VirtualMachineScaleSetVMNetworkProfileConfiguration{
-				NetworkInterfaceConfigurations: &networkInterfaceConfigurations,
-			},
-		},
+	// Update instances to latest VMSS model.
+	vmInstanceIDs := compute.VirtualMachineScaleSetVMInstanceRequiredIDs{
+		InstanceIds: &instanceIDs,
 	}
-
-	// Get the node resource group.
-	nodeResourceGroup, err := ss.GetNodeResourceGroup(vmName)
+	err = ss.updateVMSSInstances(service, vmSetName, vmInstanceIDs)
 	if err != nil {
 		return err
 	}
 
-	// Invalidate the cache since we would update it.
-	if err = ss.deleteCacheForNode(vmName); err != nil {
-		return err
-	}
-
-	// Update vmssVM with backoff.
-	ctx, cancel := getContextWithCancel()
-	defer cancel()
-	klog.V(2).Infof("EnsureHostInPool begins to update vmssVM(%s) with new backendPoolID %s", vmName, backendPoolID)
-	resp, err := ss.VirtualMachineScaleSetVMsClient.Update(ctx, nodeResourceGroup, ssName, instanceID, newVM, "network_update")
-	if ss.CloudProviderBackoff && shouldRetryHTTPRequest(resp, err) {
-		klog.V(2).Infof("EnsureHostInPool update backing off vmssVM(%s) with new backendPoolID %s, err: %v", vmName, backendPoolID, err)
-		retryErr := ss.UpdateVmssVMWithRetry(nodeResourceGroup, ssName, instanceID, newVM, "network_update")
-		if retryErr != nil {
-			err = retryErr
-			klog.Errorf("EnsureHostInPool update abort backoff vmssVM(%s) with new backendPoolID %s, err: %v", vmName, backendPoolID, err)
-		}
-	}
-
-	return err
+	return nil
 }
 
 func getVmssAndResourceGroupNameByVMProviderID(providerID string) (string, string, error) {
@@ -961,8 +968,8 @@ func (ss *scaleSet) ensureVMSSInPool(service *v1.Service, nodes []*v1.Node, back
 			// sets, the same network interface couldn't be added to more than one load balancer of
 			// the same type. Omit those nodes (e.g. masters) so Azure ARM won't complain
 			// about this.
-			newBackendPoolsIDs := make([]string, 0, len(newBackendPools))
-			for _, pool := range newBackendPools {
+			newBackendPoolsIDs := make([]string, 0, len(loadBalancerBackendAddressPools))
+			for _, pool := range loadBalancerBackendAddressPools {
 				if pool.ID != nil {
 					newBackendPoolsIDs = append(newBackendPoolsIDs, *pool.ID)
 				}
@@ -972,32 +979,48 @@ func (ss *scaleSet) ensureVMSSInPool(service *v1.Service, nodes []*v1.Node, back
 				return err
 			}
 			if !isSameLB {
-				klog.V(4).Infof("VMSS %q has already been added to LB %q, omit adding it to a new one", vmSetName, oldLBName)
+				klog.V(4).Infof("VMSS %q has already been added to LB %q, omit adding it to a new one", vmssName, oldLBName)
 				return nil
 			}
 		}
 
-		newBackendPools = append(newBackendPools,
+		// Compose a new vmss with added backendPoolID.
+		loadBalancerBackendAddressPools = append(loadBalancerBackendAddressPools,
 			compute.SubResource{
 				ID: to.StringPtr(backendPoolID),
 			})
-		primaryIPConfiguration.LoadBalancerBackendAddressPools = &newBackendPools
+		primaryIPConfig.LoadBalancerBackendAddressPools = &loadBalancerBackendAddressPools
+		newVMSS := compute.VirtualMachineScaleSet{
+			Sku:      vmss.Sku,
+			Location: vmss.Location,
+			VirtualMachineScaleSetProperties: &compute.VirtualMachineScaleSetProperties{
+				VirtualMachineProfile: &compute.VirtualMachineScaleSetVMProfile{
+					NetworkProfile: &compute.VirtualMachineScaleSetNetworkProfile{
+						NetworkInterfaceConfigurations: &vmssNIC,
+					},
+				},
+			},
+		}
 
-		err := ss.createOrUpdateVMSS(service, virtualMachineScaleSet)
+		// Update vmssVM with backoff.
+		ctx, cancel := getContextWithCancel()
+		defer cancel()
+
+		klog.V(2).Infof("ensureVMSSInPool begins to update vmss(%s) with new backendPoolID %s", vmssName, backendPoolID)
+		resp, err := ss.VirtualMachineScaleSetsClient.CreateOrUpdate(ctx, ss.ResourceGroup, vmssName, newVMSS)
+
+		if ss.CloudProviderBackoff && shouldRetryHTTPRequest(resp, err) {
+			klog.V(2).Infof("ensureVMSSInPool update backing off vmss(%s) with new backendPoolID %s, err: %v", vmssName, backendPoolID, err)
+			retryErr := ss.CreateOrUpdateVmssWithRetry(ss.ResourceGroup, vmssName, newVMSS)
+			if retryErr != nil {
+				err = retryErr
+				klog.Errorf("ensureVMSSInPool update abort backoff vmssVM(%s) with new backendPoolID %s, err: %v", vmssName, backendPoolID, err)
+			}
+		}
 		if err != nil {
 			return err
 		}
 	}
-
-	// Update instances to latest VMSS model.
-	vmInstanceIDs := compute.VirtualMachineScaleSetVMInstanceRequiredIDs{
-		InstanceIds: &instanceIDs,
-	}
-	err = ss.updateVMSSInstances(service, vmSetName, vmInstanceIDs)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -1096,23 +1119,10 @@ func (ss *scaleSet) ensureScaleSetBackendPoolDeleted(service *v1.Service, poolID
 		return err
 	}
 
-	// Invalidate the cache since we would update it.
-	if err = ss.deleteCacheForNode(nodeName); err != nil {
-		return err
-	}
-
-	// Update vmssVM with backoff.
-	ctx, cancel := getContextWithCancel()
-	defer cancel()
-	klog.V(2).Infof("ensureBackendPoolDeletedFromNode begins to update vmssVM(%s) with backendPoolID %s", nodeName, backendPoolID)
-	resp, err := ss.VirtualMachineScaleSetVMsClient.Update(ctx, nodeResourceGroup, ssName, instanceID, newVM, "network_update")
-	if ss.CloudProviderBackoff && shouldRetryHTTPRequest(resp, err) {
-		klog.V(2).Infof("ensureBackendPoolDeletedFromNode update backing off vmssVM(%s) with backendPoolID %s, err: %v", nodeName, backendPoolID, err)
-		retryErr := ss.UpdateVmssVMWithRetry(nodeResourceGroup, ssName, instanceID, newVM, "network_update")
-		if retryErr != nil {
-			err = retryErr
-			klog.Errorf("ensureBackendPoolDeletedFromNode update abort backoff vmssVM(%s) with backendPoolID %s, err: %v", nodeName, backendPoolID, err)
-		}
+	// Update instances to latest VMSS model.
+	instanceIDs := []string{"*"}
+	vmInstanceIDs := compute.VirtualMachineScaleSetVMInstanceRequiredIDs{
+		InstanceIds: &instanceIDs,
 	}
 	err = ss.updateVMSSInstances(service, ssName, vmInstanceIDs)
 	if err != nil {
