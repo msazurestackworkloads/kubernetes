@@ -600,7 +600,7 @@ func (ss *scaleSet) getScaleSetWithRetry(service *v1.Service, name string) (comp
 	var exists bool
 
 	err := wait.ExponentialBackoff(ss.requestBackoff(), func() (bool, error) {
-		cached, retryErr := ss.vmssCache.Get(name)
+		cached, retryErr := ss.vmssVMCache.Get(name)
 		if retryErr != nil {
 			ss.Event(service, v1.EventTypeWarning, "GetVirtualMachineScaleSet", retryErr.Error())
 			klog.Errorf("backoff: failure for scale set %q, will retry,err=%v", name, retryErr)
@@ -804,13 +804,6 @@ func (ss *scaleSet) ensureHostsInVMSetPool(service *v1.Service, backendPoolID st
 	vmInstanceIDs := compute.VirtualMachineScaleSetVMInstanceRequiredIDs{
 		InstanceIds: &instanceIDs,
 	}
-
-	// Invalidate the cache since we would update it.
-	if err = ss.deleteCacheForNode(vmName); err != nil {
-		return err
-	}
-
-	// Update vmssVM with backoff.
 	ctx, cancel := getContextWithCancel()
 	defer cancel()
 	instanceResp, err := ss.VirtualMachineScaleSetsClient.UpdateInstances(ctx, ss.ResourceGroup, vmSetName, vmInstanceIDs)
