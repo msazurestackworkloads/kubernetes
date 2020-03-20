@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-07-01/network"
@@ -31,6 +32,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	cloudprovider "k8s.io/cloud-provider"
@@ -48,6 +50,13 @@ var (
 	vmssIPConfigurationRE  = regexp.MustCompile(`.*/subscriptions/(?:.*)/resourceGroups/(.+)/providers/Microsoft.Compute/virtualMachineScaleSets/(.+)/virtualMachines/(.+)/networkInterfaces(?:.*)`)
 	vmssPIPConfigurationRE = regexp.MustCompile(`.*/subscriptions/(?:.*)/resourceGroups/(.+)/providers/Microsoft.Compute/virtualMachineScaleSets/(.+)/virtualMachines/(.+)/networkInterfaces/(.+)/ipConfigurations/(.+)/publicIPAddresses/(.+)`)
 	vmssVMProviderIDRE     = regexp.MustCompile(`azure:///subscriptions/(?:.*)/resourceGroups/(.+)/providers/Microsoft.Compute/virtualMachineScaleSets/(.+)/virtualMachines/(?:\d+)`)
+)
+
+const (
+	// vmssVMInstanceUpdateDelay is used when updating multiple vm instances in parallel
+	// the optimum value is 3s to prevent any conflicts that result in concurrent vmss vm
+	// instances update
+	vmssVMInstanceUpdateDelay = 3 * time.Second
 )
 
 // scaleSet implements VMSet interface for Azure scale set.
@@ -1210,39 +1219,52 @@ func (ss *scaleSet) ensureVMSSInPool(service *v1.Service, nodes []*v1.Node, back
 // EnsureHostsInPool ensures the given Node's primary IP configurations are
 // participating in the specified LoadBalancer Backend Pool.
 func (ss *scaleSet) EnsureHostsInPool(service *v1.Service, nodes []*v1.Node, backendPoolID string, vmSetName string, isInternal bool) error {
-	serviceName := getServiceName(service)
-	scalesets, standardNodes, err := ss.getNodesScaleSets(nodes)
-	if err != nil {
-		klog.Errorf("getNodesScaleSets() for service %q failed: %v", serviceName, err)
-		return err
-	}
+	hostUpdates := make([]func() error, 0, len(nodes))
+	for _, node := range nodes {
+		localNodeName := node.Name
 
-	for ssName, instanceIDs := range scalesets {
-		// Only add nodes belonging to specified vmSet for basic SKU LB.
-		if !ss.useStandardLoadBalancer() && !strings.EqualFold(ssName, vmSetName) {
+		if ss.useStandardLoadBalancer() && ss.excludeMasterNodesFromStandardLB() && isMasterNode(node) {
+			klog.V(4).Infof("Excluding master node %q from load balancer backendpool %q", localNodeName, backendPoolID)
 			continue
 		}
 
-		if instanceIDs.Len() == 0 {
-			// This may happen when scaling a vmss capacity to 0.
-			klog.V(3).Infof("scale set %q has 0 nodes, adding it to load balancer anyway", ssName)
-			// InstanceIDs is required to update vmss, use * instead here since there are no nodes actually.
-			instanceIDs.Insert("*")
+		if ss.ShouldNodeExcludedFromLoadBalancer(node) {
+			klog.V(4).Infof("Excluding unmanaged/external-resource-group node %q", localNodeName)
+			continue
 		}
 
-		err := ss.ensureHostsInVMSetPool(service, backendPoolID, ssName, instanceIDs.List(), isInternal)
-		if err != nil {
-			klog.Errorf("ensureHostsInVMSetPool() with scaleSet %q for service %q failed: %v", ssName, serviceName, err)
-			return err
+		f := func() error {
+			// VMAS nodes should also be added to the SLB backends.
+			if ss.useStandardLoadBalancer() {
+				// Check whether the node is VMAS virtual machine.
+				managedByAS, err := ss.isNodeManagedByAvailabilitySet(localNodeName, cacheReadTypeDefault)
+				if err != nil {
+					klog.Errorf("Failed to check isNodeManagedByAvailabilitySet(%s): %v", localNodeName, err)
+					return err
+				}
+				if managedByAS {
+					return ss.availabilitySet.EnsureHostInPool(service, types.NodeName(localNodeName), backendPoolID, vmSetName, isInternal)
+				}
+			}
+
+			err := ss.EnsureHostInPool(service, types.NodeName(localNodeName), backendPoolID, vmSetName, isInternal)
+			if err != nil {
+				return fmt.Errorf("EnsureHostInPool(%s): backendPoolID(%s) - failed to ensure host in pool: %q", getServiceName(service), backendPoolID, err)
+			}
+			return nil
 		}
+		hostUpdates = append(hostUpdates, f)
 	}
 
-	if ss.useStandardLoadBalancer() && len(standardNodes) > 0 {
-		err := ss.availabilitySet.EnsureHostsInPool(service, standardNodes, backendPoolID, "", isInternal)
-		if err != nil {
-			klog.Errorf("availabilitySet.EnsureHostsInPool() for service %q failed: %v", serviceName, err)
-			return err
-		}
+	errs := aggregateGoroutinesWithDelay(vmssVMInstanceUpdateDelay, hostUpdates...)
+	if errs != nil {
+		return utilerrors.Flatten(errs)
+	}
+
+	// we need to add the LB backend updates back to VMSS model, see issue kubernetes/kubernetes#80365 for detailed information
+	err := ss.ensureVMSSInPool(service, nodes, backendPoolID, vmSetName)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -1549,43 +1571,67 @@ func getScaleSetAndResourceGroupNameByIPConfigurationID(ipConfigurationID string
 	return scaleSetName, resourceGroup, nil
 }
 
-// EnsureBackendPoolDeleted ensures the loadBalancer backendAddressPools deleted from the specified vmSet.
-func (ss *scaleSet) EnsureBackendPoolDeleted(service *v1.Service, poolID, vmSetName string, backendAddressPools *[]network.BackendAddressPool) error {
+// EnsureBackendPoolDeleted ensures the loadBalancer backendAddressPools deleted from the specified nodes.
+func (ss *scaleSet) EnsureBackendPoolDeleted(service *v1.Service, backendPoolID, vmSetName string, backendAddressPools *[]network.BackendAddressPool) error {
+	// Returns nil if backend address pools already deleted.
 	if backendAddressPools == nil {
 		return nil
 	}
 
-	scalesets := sets.NewString()
+	ipConfigurationIDs := []string{}
 	for _, backendPool := range *backendAddressPools {
-		if strings.EqualFold(*backendPool.ID, poolID) && backendPool.BackendIPConfigurations != nil {
-			for _, ipConfigurations := range *backendPool.BackendIPConfigurations {
-				if ipConfigurations.ID == nil {
+		if strings.EqualFold(*backendPool.ID, backendPoolID) && backendPool.BackendIPConfigurations != nil {
+			for _, ipConf := range *backendPool.BackendIPConfigurations {
+				if ipConf.ID == nil {
 					continue
 				}
 
-				ssName, err := extractScaleSetNameByProviderID(*ipConfigurations.ID)
-				if err != nil {
-					klog.V(4).Infof("backend IP configuration %q is not belonging to any vmss, omit it", *ipConfigurations.ID)
-					continue
-				}
-
-				scalesets.Insert(ssName)
+				ipConfigurationIDs = append(ipConfigurationIDs, *ipConf.ID)
 			}
-			break
 		}
 	}
 
-	for ssName := range scalesets {
-		// Only remove nodes belonging to specified vmSet to basic LB backends.
-		if !ss.useStandardLoadBalancer() && !strings.EqualFold(ssName, vmSetName) {
-			continue
-		}
+	hostUpdates := make([]func() error, 0, len(ipConfigurationIDs))
+	for i := range ipConfigurationIDs {
+		ipConfigurationID := ipConfigurationIDs[i]
 
-		err := ss.ensureScaleSetBackendPoolDeleted(service, poolID, ssName)
-		if err != nil {
-			klog.Errorf("ensureScaleSetBackendPoolDeleted() with scaleSet %q failed: %v", ssName, err)
-			return err
+		f := func() error {
+			var scaleSetName string
+			var err error
+			if scaleSetName, err = extractScaleSetNameByProviderID(ipConfigurationID); err == nil {
+				// Only remove nodes belonging to specified vmSet to basic LB backends.
+				if !ss.useStandardLoadBalancer() && !strings.EqualFold(scaleSetName, vmSetName) {
+					return nil
+				}
+			}
+
+			nodeName, err := ss.getNodeNameByIPConfigurationID(ipConfigurationID)
+			if err != nil {
+				if err == ErrorNotVmssInstance { // Do nothing for the VMAS nodes.
+					return nil
+				}
+				klog.Errorf("Failed to getNodeNameByIPConfigurationID(%s): %v", ipConfigurationID, err)
+				return err
+			}
+
+			err = ss.ensureBackendPoolDeletedFromNode(service, nodeName, backendPoolID)
+			if err != nil {
+				return fmt.Errorf("failed to ensure backend pool %s deleted from node %s: %v", backendPoolID, nodeName, err)
+			}
+
+			return nil
 		}
+		hostUpdates = append(hostUpdates, f)
+	}
+
+	errs := aggregateGoroutinesWithDelay(vmssVMInstanceUpdateDelay, hostUpdates...)
+	if errs != nil {
+		return utilerrors.Flatten(errs)
+	}
+
+	err := ss.ensureBackendPoolDeletedFromVMSS(service, backendPoolID, vmSetName, ipConfigurationIDs)
+	if err != nil {
+		return err
 	}
 
 	return nil
