@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
 
@@ -875,7 +875,7 @@ func (fDC *fakeDisksClient) Get(ctx context.Context, resourceGroupName string, d
 
 	return result, autorest.DetailedError{
 		StatusCode: http.StatusNotFound,
-		Message:    "Not such Disk",
+		Message:    fmt.Sprintf("Disk %s is not found.", diskName),
 	}
 }
 
@@ -922,6 +922,10 @@ func (f *fakeVMSet) GetVMSetNames(service *v1.Service, nodes []*v1.Node) (availa
 }
 
 func (f *fakeVMSet) EnsureHostsInPool(service *v1.Service, nodes []*v1.Node, backendPoolID string, vmSetName string, isInternal bool) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (f *fakeVMSet) EnsureHostInPool(service *v1.Service, nodeName types.NodeName, backendPoolID string, vmSetName string, isInternal bool) error {
 	return fmt.Errorf("unimplemented")
 }
 
