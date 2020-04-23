@@ -28,7 +28,7 @@ import (
 
 const (
 	defaultStorageAccountType      = string(storage.StandardLRS)
-	defaultStorageAccountKind      = storage.StorageV2
+	defaultStorageAccountKind      = storage.Storage
 	fileShareAccountNamePrefix     = "f"
 	sharedDiskAccountNamePrefix    = "ds"
 	dedicatedDiskAccountNamePrefix = "dd"
