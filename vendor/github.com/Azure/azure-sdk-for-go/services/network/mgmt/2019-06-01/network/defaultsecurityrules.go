@@ -86,7 +86,7 @@ func (client DefaultSecurityRulesClient) GetPreparer(ctx context.Context, resour
 		"subscriptionId":           autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -164,7 +164,7 @@ func (client DefaultSecurityRulesClient) ListPreparer(ctx context.Context, resou
 		"subscriptionId":           autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
