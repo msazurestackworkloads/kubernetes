@@ -86,7 +86,7 @@ func (client ServiceAssociationLinksClient) ListPreparer(ctx context.Context, re
 		"virtualNetworkName": autorest.Encode("path", virtualNetworkName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2017-10-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
