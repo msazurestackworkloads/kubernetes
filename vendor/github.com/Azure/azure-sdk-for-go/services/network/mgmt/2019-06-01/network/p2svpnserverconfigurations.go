@@ -82,7 +82,7 @@ func (client P2sVpnServerConfigurationsClient) CreateOrUpdatePreparer(ctx contex
 		"virtualWanName":                autorest.Encode("path", virtualWanName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -164,7 +164,7 @@ func (client P2sVpnServerConfigurationsClient) DeletePreparer(ctx context.Contex
 		"virtualWanName":                autorest.Encode("path", virtualWanName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -248,7 +248,7 @@ func (client P2sVpnServerConfigurationsClient) GetPreparer(ctx context.Context, 
 		"virtualWanName":                autorest.Encode("path", virtualWanName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -326,7 +326,7 @@ func (client P2sVpnServerConfigurationsClient) ListByVirtualWanPreparer(ctx cont
 		"virtualWanName":    autorest.Encode("path", virtualWanName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

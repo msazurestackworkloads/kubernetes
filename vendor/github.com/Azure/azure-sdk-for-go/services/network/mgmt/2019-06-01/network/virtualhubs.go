@@ -79,7 +79,7 @@ func (client VirtualHubsClient) CreateOrUpdatePreparer(ctx context.Context, reso
 		"virtualHubName":    autorest.Encode("path", virtualHubName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -159,7 +159,7 @@ func (client VirtualHubsClient) DeletePreparer(ctx context.Context, resourceGrou
 		"virtualHubName":    autorest.Encode("path", virtualHubName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -241,7 +241,7 @@ func (client VirtualHubsClient) GetPreparer(ctx context.Context, resourceGroupNa
 		"virtualHubName":    autorest.Encode("path", virtualHubName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -314,7 +314,7 @@ func (client VirtualHubsClient) ListPreparer(ctx context.Context) (*http.Request
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -427,7 +427,7 @@ func (client VirtualHubsClient) ListByResourceGroupPreparer(ctx context.Context,
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -536,7 +536,7 @@ func (client VirtualHubsClient) UpdateTagsPreparer(ctx context.Context, resource
 		"virtualHubName":    autorest.Encode("path", virtualHubName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

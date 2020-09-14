@@ -46,7 +46,7 @@ const (
 
 	// DefaultAPIVersion is the Azure Storage API version string used when a
 	// basic client is created.
-	DefaultAPIVersion = "2018-03-28"
+	DefaultAPIVersion = "2017-11-09"
 
 	defaultUseHTTPS      = true
 	defaultRetryAttempts = 5
