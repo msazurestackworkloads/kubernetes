@@ -85,7 +85,7 @@ func (client ExpressRouteCircuitConnectionsClient) CreateOrUpdatePreparer(ctx co
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -170,7 +170,7 @@ func (client ExpressRouteCircuitConnectionsClient) DeletePreparer(ctx context.Co
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -256,7 +256,7 @@ func (client ExpressRouteCircuitConnectionsClient) GetPreparer(ctx context.Conte
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -336,7 +336,7 @@ func (client ExpressRouteCircuitConnectionsClient) ListPreparer(ctx context.Cont
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

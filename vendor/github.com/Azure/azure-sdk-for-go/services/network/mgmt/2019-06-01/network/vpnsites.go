@@ -79,7 +79,7 @@ func (client VpnSitesClient) CreateOrUpdatePreparer(ctx context.Context, resourc
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -159,7 +159,7 @@ func (client VpnSitesClient) DeletePreparer(ctx context.Context, resourceGroupNa
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -241,7 +241,7 @@ func (client VpnSitesClient) GetPreparer(ctx context.Context, resourceGroupName 
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -314,7 +314,7 @@ func (client VpnSitesClient) ListPreparer(ctx context.Context) (*http.Request, e
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -427,7 +427,7 @@ func (client VpnSitesClient) ListByResourceGroupPreparer(ctx context.Context, re
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -536,7 +536,7 @@ func (client VpnSitesClient) UpdateTagsPreparer(ctx context.Context, resourceGro
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

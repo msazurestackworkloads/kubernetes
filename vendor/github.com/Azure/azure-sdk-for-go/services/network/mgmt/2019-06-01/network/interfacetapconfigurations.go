@@ -117,7 +117,7 @@ func (client InterfaceTapConfigurationsClient) CreateOrUpdatePreparer(ctx contex
 		"tapConfigurationName": autorest.Encode("path", tapConfigurationName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -199,7 +199,7 @@ func (client InterfaceTapConfigurationsClient) DeletePreparer(ctx context.Contex
 		"tapConfigurationName": autorest.Encode("path", tapConfigurationName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -283,7 +283,7 @@ func (client InterfaceTapConfigurationsClient) GetPreparer(ctx context.Context, 
 		"tapConfigurationName": autorest.Encode("path", tapConfigurationName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -361,7 +361,7 @@ func (client InterfaceTapConfigurationsClient) ListPreparer(ctx context.Context,
 		"subscriptionId":       autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

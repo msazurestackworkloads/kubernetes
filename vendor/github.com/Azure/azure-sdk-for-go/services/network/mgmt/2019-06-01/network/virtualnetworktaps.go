@@ -111,7 +111,7 @@ func (client VirtualNetworkTapsClient) CreateOrUpdatePreparer(ctx context.Contex
 		"tapName":           autorest.Encode("path", tapName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -190,7 +190,7 @@ func (client VirtualNetworkTapsClient) DeletePreparer(ctx context.Context, resou
 		"tapName":           autorest.Encode("path", tapName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -272,7 +272,7 @@ func (client VirtualNetworkTapsClient) GetPreparer(ctx context.Context, resource
 		"tapName":           autorest.Encode("path", tapName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -345,7 +345,7 @@ func (client VirtualNetworkTapsClient) ListAllPreparer(ctx context.Context) (*ht
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -458,7 +458,7 @@ func (client VirtualNetworkTapsClient) ListByResourceGroupPreparer(ctx context.C
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -567,7 +567,7 @@ func (client VirtualNetworkTapsClient) UpdateTagsPreparer(ctx context.Context, r
 		"tapName":           autorest.Encode("path", tapName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

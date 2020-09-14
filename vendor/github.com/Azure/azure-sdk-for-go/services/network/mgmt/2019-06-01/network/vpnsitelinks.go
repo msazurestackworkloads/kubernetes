@@ -86,7 +86,7 @@ func (client VpnSiteLinksClient) GetPreparer(ctx context.Context, resourceGroupN
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -164,7 +164,7 @@ func (client VpnSiteLinksClient) ListByVpnSitePreparer(ctx context.Context, reso
 		"vpnSiteName":       autorest.Encode("path", vpnSiteName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
