@@ -892,6 +892,39 @@ func (ss *scaleSet) getConfigForScaleSetByIPFamily(config *compute.VirtualMachin
 	return nil, fmt.Errorf("failed to find a  IPconfiguration(IPv6=%v) for the scale set VM %q", IPv6, nodeName)
 }
 
+// getPrimaryNetworkConfiguration gets primary network interface configuration for scale sets.
+func (ss *scaleSet) getPrimaryNetworkConfiguration(networkConfigurationList *[]compute.VirtualMachineScaleSetNetworkConfiguration, scaleSetName string) (*compute.VirtualMachineScaleSetNetworkConfiguration, error) {
+	networkConfigurations := *networkConfigurationList
+	if len(networkConfigurations) == 1 {
+		return &networkConfigurations[0], nil
+	}
+
+	for idx := range networkConfigurations {
+		networkConfig := &networkConfigurations[idx]
+		if networkConfig.Primary != nil && *networkConfig.Primary == true {
+			return networkConfig, nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to find a primary network configuration for the scale set %q", scaleSetName)
+}
+
+func (ss *scaleSet) getPrimaryIPConfigForScaleSet(config *compute.VirtualMachineScaleSetNetworkConfiguration, scaleSetName string) (*compute.VirtualMachineScaleSetIPConfiguration, error) {
+	ipConfigurations := *config.IPConfigurations
+	if len(ipConfigurations) == 1 {
+		return &ipConfigurations[0], nil
+	}
+
+	for idx := range ipConfigurations {
+		ipConfig := &ipConfigurations[idx]
+		if ipConfig.Primary != nil && *ipConfig.Primary == true {
+			return ipConfig, nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to find a primary IP configuration for the scale set %q", scaleSetName)
+}
+
 // EnsureHostInPool ensures the given VM's Primary NIC's Primary IP Configuration is
 // participating in the specified LoadBalancer Backend Pool, which returns (resourceGroup, vmssName, instanceID, vmssVM, error).
 func (ss *scaleSet) EnsureHostInPool(service *v1.Service, nodeName types.NodeName, backendPoolID string, vmSetName string, isInternal bool) (string, string, string, *compute.VirtualMachineScaleSetVM, error) {
@@ -911,29 +944,56 @@ func (ss *scaleSet) EnsureHostInPool(service *v1.Service, nodeName types.NodeNam
 		return "", "", "", nil, nil
 	}
 
-	// Find primary network interface configuration.
-	if vm.NetworkProfileConfiguration.NetworkInterfaceConfigurations == nil {
-		klog.V(4).Infof("EnsureHostInPool: cannot obtain the primary network interface configuration, of vm %s, probably because the vm's being deleted", vmName)
-		return "", "", "", nil, nil
-	}
-
-	networkInterfaceConfigurations := *vm.NetworkProfileConfiguration.NetworkInterfaceConfigurations
-	primaryNetworkInterfaceConfiguration, err := ss.getPrimaryNetworkInterfaceConfiguration(networkInterfaceConfigurations, vmName)
-	if err != nil {
-		return "", "", "", nil, err
-	}
-
 	var primaryIPConfiguration *compute.VirtualMachineScaleSetIPConfiguration
-	ipv6 := utilnet.IsIPv6String(service.Spec.ClusterIP)
-	// Find primary network interface configuration.
-	if !ss.Cloud.ipv6DualStackEnabled && !ipv6 {
-		// Find primary IP configuration.
-		primaryIPConfiguration, err = getPrimaryIPConfigFromVMSSNetworkConfig(primaryNetworkInterfaceConfiguration)
+	var networkInterfaceConfigurations []compute.VirtualMachineScaleSetNetworkConfiguration
+	if vm.NetworkProfileConfiguration != nil {
+		// Find primary network interface configuration.
+		if vm.NetworkProfileConfiguration.NetworkInterfaceConfigurations == nil {
+			klog.V(4).Infof("EnsureHostInPool: cannot obtain the primary network interface configuration, of vm %s, probably because the vm's being deleted", vmName)
+			return "", "", "", nil, nil
+		}
+
+		networkInterfaceConfigurations = *vm.NetworkProfileConfiguration.NetworkInterfaceConfigurations
+		primaryNetworkInterfaceConfiguration, err := ss.getPrimaryNetworkInterfaceConfiguration(networkInterfaceConfigurations, vmName)
 		if err != nil {
 			return "", "", "", nil, err
 		}
+
+		ipv6 := utilnet.IsIPv6String(service.Spec.ClusterIP)
+		// Find primary network interface configuration.
+		if !ss.Cloud.ipv6DualStackEnabled && !ipv6 {
+			// Find primary IP configuration.
+			primaryIPConfiguration, err = getPrimaryIPConfigFromVMSSNetworkConfig(primaryNetworkInterfaceConfiguration)
+			if err != nil {
+				return "", "", "", nil, err
+			}
+		} else {
+			primaryIPConfiguration, err = ss.getConfigForScaleSetByIPFamily(primaryNetworkInterfaceConfiguration, vmName, ipv6)
+			if err != nil {
+				return "", "", "", nil, err
+			}
+		}
 	} else {
-		primaryIPConfiguration, err = ss.getConfigForScaleSetByIPFamily(primaryNetworkInterfaceConfiguration, vmName, ipv6)
+		virtualMachineScaleSet, err := ss.getVMSS(vmSetName, azcache.CacheReadTypeDefault)
+		if err != nil {
+			klog.Errorf("ss.getVMSS(%s) failed: %v", vmSetName, err)
+			return "", "", "", nil, err
+		}
+		if virtualMachineScaleSet == nil {
+			errorMessage := fmt.Errorf("Scale set %q not found", vmSetName)
+			klog.Errorf("%v", errorMessage)
+			return "", "", "", nil, err
+		}
+
+		// Find primary network interface configuration.
+		networkConfigureList := virtualMachineScaleSet.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations
+		primaryNetworkConfiguration, err := ss.getPrimaryNetworkConfiguration(networkConfigureList, vmSetName)
+		if err != nil {
+			return "", "", "", nil, err
+		}
+
+		// Find primary IP configuration.
+		primaryIPConfiguration, err = ss.getPrimaryIPConfigForScaleSet(primaryNetworkConfiguration, vmSetName)
 		if err != nil {
 			return "", "", "", nil, err
 		}
