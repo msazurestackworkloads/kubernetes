@@ -83,7 +83,7 @@ func (client ServiceEndpointPolicyDefinitionsClient) CreateOrUpdatePreparer(ctx 
 		"subscriptionId":                      autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -164,7 +164,7 @@ func (client ServiceEndpointPolicyDefinitionsClient) DeletePreparer(ctx context.
 		"subscriptionId":                      autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -248,7 +248,7 @@ func (client ServiceEndpointPolicyDefinitionsClient) GetPreparer(ctx context.Con
 		"subscriptionId":                      autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -326,7 +326,7 @@ func (client ServiceEndpointPolicyDefinitionsClient) ListByResourceGroupPreparer
 		"subscriptionId":            autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2018-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
