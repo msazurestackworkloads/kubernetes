@@ -27,7 +27,7 @@ import (
 
 const (
 	// APIVersion is the API version for compute.
-	APIVersion = "2019-11-01"
+	APIVersion = "2019-03-01"
 )
 
 // Interface is the client interface for Disks.
