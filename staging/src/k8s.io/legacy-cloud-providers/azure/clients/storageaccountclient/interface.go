@@ -27,7 +27,7 @@ import (
 
 const (
 	// APIVersion is the API version for network.
-	APIVersion = "2019-06-01"
+	APIVersion = "2018-02-01"
 )
 
 // Interface is the client interface for StorageAccounts.
