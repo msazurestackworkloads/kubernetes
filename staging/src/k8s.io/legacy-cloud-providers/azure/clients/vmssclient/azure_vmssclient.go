@@ -240,6 +240,66 @@ func (c *Client) CreateOrUpdate(ctx context.Context, resourceGroupName string, V
 	return nil
 }
 
+// ManualUpgradeInstances upgrade all instances to the latest model
+func (c *Client) ManualUpgradeInstances(ctx context.Context, resourceGroupName string, vmScaleSetName string, vmInstanceIDs compute.VirtualMachineScaleSetVMInstanceRequiredIDs) *retry.Error {
+	mc := metrics.NewMetricContext("vmss", "manualupgrade_instances", resourceGroupName, c.subscriptionID, "")
+
+	// Report errors if the client is rate limited.
+	if !c.rateLimiterWriter.TryAccept() {
+		mc.RateLimitedCount()
+		return retry.GetRateLimitError(true, "ManualUpgradeInstances")
+	}
+
+	// Report errors if the client is throttled.
+	if c.RetryAfterWriter.After(time.Now()) {
+		mc.ThrottledCount()
+		rerr := retry.GetThrottlingError("ManualUpgradeInstances", "client throttled", c.RetryAfterWriter)
+		return rerr
+	}
+
+	resourceID := armclient.GetResourceID(
+		c.subscriptionID,
+		resourceGroupName,
+		"Microsoft.Compute/virtualMachineScaleSets",
+		vmScaleSetName,
+	)
+	response, rerr := c.armClient.PostResource(ctx, resourceID, "manualUpgrade", vmInstanceIDs)
+	defer c.armClient.CloseResponse(ctx, response)
+	if rerr != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "vmss.manualUpgrade.request", resourceID, rerr.Error())
+		return rerr
+	}
+
+	err := autorest.Respond(response, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
+	if err != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "vmss.manualUpgrade.respond", resourceID, rerr.Error())
+		return retry.GetError(response, err)
+	}
+
+	future, err := azure.NewFutureFromResponse(response)
+	if err != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "vmss.manualUpgrade.future", resourceID, rerr.Error())
+		return retry.NewError(false, err)
+	}
+
+	if err := c.armClient.WaitForAsyncOperationCompletion(ctx, &future, "vmssclient.ManualUpgradeInstances"); err != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "vmss.manualUpgrade.wait", resourceID, rerr.Error())
+		return retry.NewError(false, err)
+	}
+
+	mc.Observe(rerr.Error())
+	if rerr != nil {
+		if rerr.IsThrottled() {
+			// Update RetryAfterReader so that no more requests would be sent until RetryAfter expires.
+			c.RetryAfterWriter = rerr.RetryAfter
+		}
+
+		return rerr
+	}
+
+	return nil
+}
+
 // CreateOrUpdateAsync sends the request to arm client and DO NOT wait for the response
 func (c *Client) CreateOrUpdateAsync(ctx context.Context, resourceGroupName string, VMScaleSetName string, parameters compute.VirtualMachineScaleSet) (*azure.Future, *retry.Error) {
 	mc := metrics.NewMetricContext("vmss", "create_or_update_async", resourceGroupName, c.subscriptionID, "")

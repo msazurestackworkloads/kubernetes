@@ -467,3 +467,46 @@ func (az *Cloud) CreateOrUpdateVMSS(resourceGroupName string, VMScaleSetName str
 
 	return nil
 }
+
+// ManualUpgradeInstancesVMSS invokes az.VirtualMachineScaleSetsClient.ManualUpgradeInstances().
+func (az *Cloud) ManualUpgradeInstancesVMSS(resourceGroupName string, VMScaleSetName string) *retry.Error {
+	ctx, cancel := getContextWithCancel()
+	defer cancel()
+
+	// When vmss is being deleted, CreateOrUpdate API would report "the vmss is being deleted" error.
+	// Since it is being deleted, we shouldn't send more CreateOrUpdate requests for it.
+	klog.V(3).Infof("ManualUpgradeInstancesVMSS: verify the status of the vmss being created or updated")
+	vmss, rerr := az.VirtualMachineScaleSetsClient.Get(ctx, resourceGroupName, VMScaleSetName)
+	if rerr != nil {
+		klog.Errorf("ManualUpgradeInstancesVMSS: error getting vmss(%s): %v", VMScaleSetName, rerr)
+		return rerr
+	}
+	if vmss.ProvisioningState != nil && strings.EqualFold(*vmss.ProvisioningState, virtualMachineScaleSetsDeallocating) {
+		klog.V(3).Infof("ManualUpgradeInstancesVMSS: found vmss %s being deleted, skipping", VMScaleSetName)
+		return nil
+	}
+
+	allVMs, rerr := az.VirtualMachineScaleSetVMsClient.List(ctx, resourceGroupName, VMScaleSetName, string(compute.InstanceView))
+	if rerr != nil {
+		klog.Errorf("ManualUpgradeInstancesVMSS: error get all VMs in vmss(%s): %v", VMScaleSetName, rerr)
+		return rerr
+	}
+	instanceIDs := []string{}
+	for _, vm := range allVMs {
+		instanceIDs = append(instanceIDs, *vm.InstanceID)
+	}
+
+	vmInstanceIDs := compute.VirtualMachineScaleSetVMInstanceRequiredIDs{
+		InstanceIds: &instanceIDs,
+	}
+	klog.V(2).Infof("ManualUpgradeInstancesVMSS: instance Ids (%v) to upgrade", instanceIDs)
+
+	rerr = az.VirtualMachineScaleSetsClient.ManualUpgradeInstances(ctx, resourceGroupName, VMScaleSetName, vmInstanceIDs)
+	klog.V(10).Infof("ManualUpgradeInstancesVMSS: VirtualMachineScaleSetsClient.ManualUpgradeInstances(%s): end", VMScaleSetName)
+	if rerr != nil {
+		klog.Errorf("ManualUpgradeInstancesVMSS: error ManualUpgradeInstances vmss(%s): %v", VMScaleSetName, rerr)
+		return rerr
+	}
+
+	return nil
+}

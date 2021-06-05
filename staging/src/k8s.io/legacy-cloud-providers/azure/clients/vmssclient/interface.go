@@ -46,6 +46,9 @@ type Interface interface {
 	// CreateOrUpdate creates or updates a VirtualMachineScaleSet.
 	CreateOrUpdate(ctx context.Context, resourceGroupName string, VMScaleSetName string, parameters compute.VirtualMachineScaleSet) *retry.Error
 
+	// ManualUpgradeInstances upgrade all instances to the latest model
+	ManualUpgradeInstances(ctx context.Context, resourceGroupName string, VMScaleSetName string, VMInstanceIDs compute.VirtualMachineScaleSetVMInstanceRequiredIDs) *retry.Error
+
 	// CreateOrUpdateSync sends the request to arm client and DO NOT wait for the response
 	CreateOrUpdateAsync(ctx context.Context, resourceGroupName string, VMScaleSetName string, parameters compute.VirtualMachineScaleSet) (*azure.Future, *retry.Error)
 
