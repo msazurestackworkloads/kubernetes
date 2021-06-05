@@ -1179,6 +1179,14 @@ func (ss *scaleSet) ensureVMSSInPool(service *v1.Service, nodes []*v1.Node, back
 			klog.Errorf("ensureVMSSInPool CreateOrUpdateVMSS(%s) with new backendPoolID %s, err: %v", vmssName, backendPoolID, err)
 			return rerr.Error()
 		}
+
+		// Upgrade VMSS instances to the latest model
+		klog.V(2).Infof("ensureVMSSInPool begins to upgrade vmss(%s)  instnace to the latest model ", vmssName)
+		rerr = ss.ManualUpgradeInstancesVMSS(ss.ResourceGroup, vmssName)
+		if rerr != nil {
+			klog.Errorf("ensureVMSSInPool ManualUpgradeInstancesVMSS(%s) , err: %v", vmssName, err)
+			return rerr.Error()
+		}
 	}
 	return nil
 }
@@ -1486,6 +1494,13 @@ func (ss *scaleSet) ensureBackendPoolDeletedFromVMSS(service *v1.Service, backen
 				return rerr.Error()
 			}
 
+			// Upgrade VMSS instances to the latest model
+			klog.V(2).Infof("ensureBackendPoolDeletedFromVMSS begins to upgrade vmss(%s)  instnace to the latest model ", vmssName)
+			rerr = ss.ManualUpgradeInstancesVMSS(ss.ResourceGroup, vmssName)
+			if rerr != nil {
+				klog.Errorf("ensureBackendPoolDeletedFromVMSS ManualUpgradeInstancesVMSS(%s) , err: %v", vmssName, err)
+				return rerr.Error()
+			}
 			return nil
 		})
 	}
