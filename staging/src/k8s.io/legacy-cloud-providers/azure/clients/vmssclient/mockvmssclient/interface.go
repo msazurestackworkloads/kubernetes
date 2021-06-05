@@ -154,3 +154,17 @@ func (mr *MockInterfaceMockRecorder) DeleteInstancesAsync(ctx, resourceGroupName
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInstancesAsync", reflect.TypeOf((*MockInterface)(nil).DeleteInstancesAsync), ctx, resourceGroupName, VMScaleSetName, vmInstanceIDs)
 }
+
+// ManualUpgradeInstances mocks base method
+func (m *MockInterface) ManualUpgradeInstances(ctx context.Context, resourceGroupName string, VMScaleSetName string, VMInstanceIDs compute.VirtualMachineScaleSetVMInstanceRequiredIDs) *retry.Error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ManualUpgradeInstances", ctx, resourceGroupName, VMScaleSetName, VMInstanceIDs)
+	ret1, _ := ret[1].(*retry.Error)
+	return ret1
+}
+
+// ManualUpgradeInstances indicates an expected call of DeleteInstancesAsync
+func (mr *MockInterfaceMockRecorder) ManualUpgradeInstances(ctx context.Context, resourceGroupName string, VMScaleSetName string, VMInstanceIDs compute.VirtualMachineScaleSetVMInstanceRequiredIDs) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManualUpgradeInstances", reflect.TypeOf((*MockInterface)(nil).ManualUpgradeInstances), ctx, resourceGroupName, VMScaleSetName, VMInstanceIDs)
+}
