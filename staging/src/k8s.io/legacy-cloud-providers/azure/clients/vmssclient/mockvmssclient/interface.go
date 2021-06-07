@@ -243,8 +243,9 @@ func (m *MockInterface) StartInstancesAsync(ctx context.Context, resourceGroupNa
 func (mr *MockInterfaceMockRecorder) StartInstancesAsync(ctx, resourceGroupName, VMScaleSetName, vmInstanceIDs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartInstancesAsync", reflect.TypeOf((*MockInterface)(nil).StartInstancesAsync), ctx, resourceGroupName, VMScaleSetName, vmInstanceIDs)
+}
 
-	// ManualUpgradeInstances mocks base method
+// ManualUpgradeInstances mocks base method
 func (m *MockInterface) ManualUpgradeInstances(ctx context.Context, resourceGroupName string, VMScaleSetName string, VMInstanceIDs compute.VirtualMachineScaleSetVMInstanceRequiredIDs) *retry.Error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ManualUpgradeInstances", ctx, resourceGroupName, VMScaleSetName, VMInstanceIDs)
